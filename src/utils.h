@@ -14,10 +14,15 @@ struct ListPCB
     int size;
 };
 
+
 struct NodePCB * createNode(struct PCB data);
+
 struct ListPCB * createList();
+
 void insertAtFront(struct ListPCB * list , struct PCB data);
+
 void freeList(struct ListPCB * list);
+
 struct PCB * findPCB(struct ListPCB * list , pid_t pid);
 
 
