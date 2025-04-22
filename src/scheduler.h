@@ -7,16 +7,15 @@ void run_scheduler();
 
 void init_schuduler();
 
+struct PCB* checkForNewArrivals();
 
-struct PCB * checkForNewArrivals();
+pid_t startProcess(struct PCB* pcb);
 
-pid_t startProcess(struct PCB * pcb);
+void resumeProcess(struct PCB* pcb);
 
-void resumeProcess(struct PCB * pcb);
+void stopProcess(struct PCB* pcb);
 
-void stopProcess(struct PCB * pcb);
-
-void recrodProcessFinish(struct PCB * pcb , int finishTime);
+void recrodProcessFinish(struct PCB* pcb, int finishTime);
 
 void calculatePerformance();
 

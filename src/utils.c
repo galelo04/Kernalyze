@@ -1,13 +1,13 @@
 #include "utils.h"
+
+#include <errno.h>
 #include <stddef.h>
 #include <stdio.h>
-#include <errno.h>
+#include <stdlib.h>
 
-
-
-//implementation of list
-struct NodePCB * createNode(struct PCB data){
-    struct NodePCB * newNode = (struct NodePCB *)malloc(sizeof(struct NodePCB));
+// implementation of list
+struct NodePCB *createNode(struct PCB data) {
+    struct NodePCB *newNode = (struct NodePCB *)malloc(sizeof(struct NodePCB));
     if (!newNode) {
         perror("malloc: ");
         exit(1);
@@ -16,8 +16,8 @@ struct NodePCB * createNode(struct PCB data){
     newNode->next = NULL;
     return newNode;
 }
-struct ListPCB * createList(){
-    struct ListPCB * list = (struct ListPCB*)malloc(sizeof(struct ListPCB));
+struct ListPCB *createList() {
+    struct ListPCB *list = (struct ListPCB *)malloc(sizeof(struct ListPCB));
     if (!list) {
         perror("malloc: ");
         exit(1);
@@ -26,28 +26,27 @@ struct ListPCB * createList(){
     list->size = 0;
     return list;
 }
-void insertAtFront(struct ListPCB * list , struct PCB data){
-    struct NodePCB * newNode = createNode(data);
+void insertAtFront(struct ListPCB *list, struct PCB data) {
+    struct NodePCB *newNode = createNode(data);
     newNode->next = list->head;
     list->head = newNode;
     list->size++;
 }
-void freeList(struct ListPCB * list){
-    struct NodePCB * temp;
-    while(list->head){
+void freeList(struct ListPCB *list) {
+    struct NodePCB *temp;
+    while (list->head) {
         temp = list->head;
-        list->head  = list->head->next;
+        list->head = list->head->next;
         free(temp);
     }
     list->size = 0;
     free(list);
 }
 
-struct PCB * findPCB(struct ListPCB * list , pid_t pid){
-    struct NodePCB * temp  = list->head;
-    while(temp){
-        if(temp->data.pid == pid)
-            return &(temp->data);
+struct PCB *findPCB(struct ListPCB *list, pid_t pid) {
+    struct NodePCB *temp = list->head;
+    while (temp) {
+        if (temp->data.pid == pid) return &(temp->data);
     }
     return NULL;
 }

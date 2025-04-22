@@ -16,8 +16,8 @@ void run_clk();
  */
 int get_clk();
 /*
- * All process call this function at the beginning to establish communication between them and the clock module.
- * Again, remember that the clock is only emulation!
+ * All process call this function at the beginning to establish communication between them and the
+ * clock module. Again, remember that the clock is only emulation!
  */
 void sync_clk();
 /*
