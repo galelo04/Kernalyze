@@ -8,6 +8,10 @@
 
 void clear_resources(int);
 int main(int argc, char* argv[]) {
+    for (int i = 0; i < argc; i++) {
+        printf("arg %d: %s\n", i, argv[i]);
+    }
+
     pid_t clk_pid = fork();
     if (clk_pid == 0) {
         signal(SIGINT, clear_resources);
@@ -31,6 +35,6 @@ int main(int argc, char* argv[]) {
     }
 }
 
-void clear_resources(int signum) {
+void clear_resources(__attribute__((unused)) int signum) {
     // TODO Clears all resources in case of interruption
 }

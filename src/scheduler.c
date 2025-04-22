@@ -17,7 +17,7 @@ void init_scheduler() { pcbTable = createList(); }
 
 void run_scheduler() {
     sync_clk();
-    int currentTime = get_clk();
+    // int currentTime = get_clk();
     // TODO implement the scheduler :)
     //  You may split it into multiple files
     // upon termination release the clock resources.
@@ -86,4 +86,10 @@ void calculatePerformance(int totalTime, int idleTime) {
     double cpuUtilization = 100 * (totalTime - idleTime / (double)totalTime);
 
     // write to the scheduler.pref
+    FILE *fp = fopen("scheduler.pref", "w");
+    if (fp == NULL) {
+        perror("Error opening file");
+        exit(EXIT_FAILURE);
+    }
+    fprintf(fp, "CPU Utilization: %.2f%%\n", cpuUtilization);
 }
