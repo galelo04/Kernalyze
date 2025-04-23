@@ -7,40 +7,10 @@
 #include <stdarg.h>
 #include "colors.h"
 
-void printInfo(const char* module, const char* format, ...) {
-    printf("[" ANSI_COLOR_BOLD_BLUE "%s" ANSI_COLOR_RESET "] ", module);
+void printInfo(const char* module, const char* format, ...);
 
-    va_list args;
-    va_start(args, format);
-    vprintf(format, args);
-    va_end(args);
+void printError(const char* module, const char* format, ...);
 
-    printf("\n");
-    fflush(stdout);
-}
-
-void printError(const char* module, const char* format, ...) {
-    printf("[" ANSI_COLOR_BOLD_RED "%s" ANSI_COLOR_RESET "] ", module);
-
-    va_list args;
-    va_start(args, format);
-    vprintf(format, args);
-    va_end(args);
-
-    printf("\n");
-    fflush(stdout);
-}
-
-void printWarning(const char* module, const char* format, ...) {
-    printf("[" ANSI_COLOR_BOLD_YELLOW "%s" ANSI_COLOR_RESET "] ", module);
-
-    va_list args;
-    va_start(args, format);
-    vprintf(format, args);
-    va_end(args);
-
-    printf("\n");
-    fflush(stdout);
-}
+void printWarning(const char* module, const char* format, ...);
 
 #endif  // CONSOLE_LOGGER_H
