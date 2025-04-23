@@ -4,69 +4,59 @@
  * This file represents an emulated clock for simulation purpose only.
  * It is not a real part of operating system!
  */
+#include "clk.h"
+
+#include <signal.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <sys/shm.h>
-#include <stdio.h>
-#include <signal.h>
 #include <unistd.h>
-#include "clk.h"
 
 #define SHKEY 300
 ///==============================
 // don't mess with this variable//
-int *shmaddr = NULL; //
+int *shmaddr = NULL;  //
 //===============================
 
 int shmid;
 
 /* Clear the resources before exit */
-void _cleanup(__attribute__((unused)) int signum)
-{
+void _cleanup(__attribute__((unused)) int signum) {
     shmctl(shmid, IPC_RMID, NULL);
     printf("Clock terminating!\n");
     exit(0);
 }
 
-void init_clk()
-{
+void init_clk() {
     printf("Clock starting\n");
     signal(SIGINT, _cleanup);
     int clk = 0;
     // Create shared memory for one integer variable 4 bytes
     shmid = shmget(SHKEY, 4, IPC_CREAT | 0644);
-    if ((long)shmid == -1)
-    {
+    if ((long)shmid == -1) {
         perror("Error in creating shm!");
         exit(-1);
     }
     int *shmaddr = (int *)shmat(shmid, (void *)0, 0);
-    if ((long)shmaddr == -1)
-    {
+    if ((long)shmaddr == -1) {
         perror("Error in attaching the shm in clock!");
         exit(-1);
     }
     *shmaddr = clk; /* initialize shared memory */
 }
 
-void run_clk()
-{
-    while (1)
-    {
+void run_clk() {
+    while (1) {
         sleep(1);
         (*shmaddr)++;
     }
 }
 
-int get_clk()
-{
-    return *shmaddr;
-}
+int get_clk() { return *shmaddr; }
 
-void sync_clk()
-{
+void sync_clk() {
     int shmid = shmget(SHKEY, 4, 0444);
-    while ((int)shmid == -1)
-    {
+    while ((int)shmid == -1) {
         // Make sure that the clock exists
         printf("Wait! The clock not initialized yet!\n");
         sleep(1);
@@ -75,11 +65,9 @@ void sync_clk()
     shmaddr = (int *)shmat(shmid, (void *)0, 0);
 }
 
-void destroy_clk(short terminateAll)
-{
+void destroy_clk(short terminateAll) {
     shmdt(shmaddr);
-    if (terminateAll)
-    {
+    if (terminateAll) {
         killpg(getpgrp(), SIGINT);
     }
 }

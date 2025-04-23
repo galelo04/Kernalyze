@@ -51,7 +51,7 @@ Module.symvers
 Mkfile.old
 dkms.conf
 
-src/bin
-src/obj
+bin
+obj
 processes.txt
 .vscode
