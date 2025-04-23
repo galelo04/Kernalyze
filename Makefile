@@ -1,9 +1,9 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -Werror -O2
+CFLAGS = -Wall -Wextra -O2
 
 SRC = src
 OBJ = bin
-TARGET = bin/os-sim
+TARGET = os-sim
 
 SRC_FILES := $(wildcard $(SRC)/**/*.c) $(wildcard $(SRC)/*.c)
 OBJ_FILES := $(patsubst $(SRC)/%.c, $(OBJ)/%.c.o, $(SRC_FILES))
@@ -18,12 +18,25 @@ $(TARGET): $(OBJ_FILES)
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -o $@ $^
 
-all: $(OBJ_FILES)
+all: $(TARGET) keyfile
 
-run: $(TARGET)
+run: all
 	@echo "Running the program..."
 	@./$(TARGET)
 
+keyfile:
+	@echo "Generating keyfile..."
+	@mkdir -p keyfile
+	@touch keyfile/key.txt
+
+test_generator:
+	@echo "Compiling test generator..."
+	$(CC) $(CFLAGS) -o bin/test_generator test_generator.c
+
+test_generator_run: test_generator
+	@echo "Running test generator..."
+	@./bin/test_generator
+
 clean:
 	rm -f $(OBJ_FILES)
-# rm -rf $(OBJ)
+	rm -rf $(OBJ)
