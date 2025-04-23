@@ -3,11 +3,13 @@
 #include "clk.h"
 #include "utils.h"
 
+void proccessGeneratorSignalHandler(int signum);
+
 void run_scheduler();
 
-void init_schuduler();
+void init_scheduler();
 
-struct PCB* checkForNewArrivals();
+struct PCB* fetchNewProcess();
 
 pid_t startProcess(struct PCB* pcb);
 

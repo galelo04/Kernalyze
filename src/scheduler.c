@@ -6,41 +6,80 @@
 #include <stdlib.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <sys/types.h>
+#include <sys/ipc.h>
+#include <sys/msg.h>
+#include <sys/shm.h>
 
 struct ListPCB *pcbTable;
 
 int idleTime = 0;  // time scheduler waiting and no process in the ready list
 
-double sumWaiting = 0, sumWeightedTurnaround = 0, sumWeightedSquared = 0;
+double sumWaiting = 0;
+int sumWeightedTurnaround = 0;
+int sumWeightedSquared = 0;
 
-void init_scheduler() { pcbTable = createList(); }
+void init_scheduler() {
+    signal(SIGUSR2, proccessGeneratorSignalHandler);
+    pcbTable = createList();
+}
 
 void run_scheduler() {
     sync_clk();
-    // int currentTime = get_clk();
-    // TODO implement the scheduler :)
-    //  You may split it into multiple files
-    // upon termination release the clock resources.
+    int old_clk = get_clk();
+    int currentTime;
+    while (1) {
+        if ((currentTime = get_clk()) != old_clk) {
+            old_clk = currentTime;
+        }
+    }
 
     destroy_clk(0);
 }
 
-struct PCB *checkForNewArrivals() {
+struct PCB *fetchNewProcess() {
     // comunicate with the process generateor to get process data
+    key_t key = ftok(MSG_QUEUE_KEYFILE, 1);
+    if (key == -1) {
+        perror("ftok");
+        return NULL;
+    }
 
-    int id = 0;
-    int arriveTime = 0;
-    int runTime = 0;
-    int priority = 0;
+    int msgqid = msgget(key, 0666);
+    if (msgqid == -1) {
+        perror("msgget");
+        return NULL;
+    }
+    struct PCBMessage msg;
+    if (msgrcv(msgqid, &msg, sizeof(struct PCB), MSG_TYPE_PCB, IPC_NOWAIT) == -1) {
+        // No new process
+        return NULL;
+    }
+
     struct PCB *pcb = (struct PCB *)malloc(sizeof(struct PCB));
-    pcb->id = id;
-    pcb->arriveTime = arriveTime;
-    pcb->remainigTime = runTime;
-    pcb->priority = priority;
-    pcb->executionTime = 0;
+    if (pcb == NULL) {
+        perror("malloc");
+        return NULL;
+    }
+    *pcb = msg.pcb;
+    pcb->remainingTime = pcb->runningTime;
     pcb->state = READY;
+    pcb->startTime = get_clk();
+    pcb->finishTime = 0;
+    pcb->waitTime = 0;
+    pcb->turnaroundTime = 0;
+    pcb->weightedTurnaroundTime = 0;
 
     insertAtFront(pcbTable, *pcb);
+
+    // Debugging
+    printf("Process %d is added to the ready list\n", pcb->id);
+    printf("Process %d: arriveTime=%d, runningTime=%d, priority=%d\n", pcb->id, pcb->arriveTime,
+           pcb->runningTime, pcb->priority);
+    printf("Process %d: remainingTime=%d, state=%d, startTime=%d\n", pcb->id, pcb->remainingTime,
+           pcb->state, pcb->startTime);
+    printf("Process %d: finishTime=%d, waitTime=%d, turnaroundTime=%d\n", pcb->id, pcb->finishTime,
+           pcb->waitTime, pcb->turnaroundTime);
 
     return pcb;
 }
@@ -64,9 +103,15 @@ void stopProcess(struct PCB *pcb) {
 void recrodProcessFinish(struct PCB *pcb, int finishTime) {
     pcb->finishTime = finishTime;
     pcb->state = FINISHED;
-    pcb->turnaroundTime = finishTime - pcb->arriveTime;
-    pcb->waitTime = pcb->turnaroundTime - pcb->executionTime;
-    pcb->weightedTurnaroundTime = pcb->turnaroundTime / (double)pcb->executionTime;
+    pcb->turnaroundTime = pcb->finishTime - pcb->arriveTime;
+    pcb->waitTime = pcb->startTime - pcb->arriveTime;
+    if (pcb->waitTime < 0) {
+        pcb->waitTime = 0;
+    }
+    if (pcb->turnaroundTime < 0) {
+        pcb->turnaroundTime = 0;
+    }
+    pcb->weightedTurnaroundTime = pcb->turnaroundTime / (double)pcb->runningTime;
 
     sumWaiting += pcb->waitTime;
     sumWeightedTurnaround += pcb->weightedTurnaroundTime;
@@ -92,4 +137,9 @@ void calculatePerformance(int totalTime, int idleTime) {
         exit(EXIT_FAILURE);
     }
     fprintf(fp, "CPU Utilization: %.2f%%\n", cpuUtilization);
+}
+
+void proccessGeneratorSignalHandler(int signum) {
+    struct PCB *pcb = fetchNewProcess();
+    signal(SIGUSR2, proccessGeneratorSignalHandler);
 }
