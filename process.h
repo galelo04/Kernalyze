@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <signal.h>
+#include "clk.h" // Include the clock header for shared memory access
 
 // Function prototypes
 void simulate_cpu_bound_work(int total_runtime, int quantum, int pipe_read_fd, int pipe_write_fd);
