@@ -5,6 +5,7 @@
  * It is not a real part of operating system!
  */
 #include "clk.h"
+#include "utils/console_logger.h"
 
 #include <signal.h>
 #include <stdio.h>
@@ -23,12 +24,12 @@ int shmid;
 /* Clear the resources before exit */
 void _cleanup(__attribute__((unused)) int signum) {
     shmctl(shmid, IPC_RMID, NULL);
-    printf("Clock terminating!\n");
+    printInfo("clk","Clock terminating!");
     exit(0);
 }
 
 void init_clk() {
-    printf("Clock starting\n");
+    printInfo("clk","Clock starting");
     signal(SIGINT, _cleanup);
     int clk = 0;
     // Create shared memory for one integer variable 4 bytes
@@ -58,7 +59,7 @@ void sync_clk() {
     int shmid = shmget(SHKEY, 4, 0444);
     while ((int)shmid == -1) {
         // Make sure that the clock exists
-        printf("Wait! The clock not initialized yet!\n");
+        printWarning("clk","Wait! The clock not initialized yet!");
         sleep(1);
         shmid = shmget(SHKEY, 4, 0444);
     }
