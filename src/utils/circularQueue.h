@@ -3,19 +3,16 @@
 #include "node.h"
 
 struct Queue {
-    struct Node *front, *rear;
+    struct Node* rear;
+    int size;
 };
-
 
 struct Queue* createQueue();
 // Function to insert element in a Circular queue
-void enQueueRear(struct Queue* queue,void * data) ;
-void enQueueFront(struct Queue* queue,void * data) ;
-void deQueueRear(struct Queue  *queue);
-void deQueueFront(struct Queue  *queue);
-
-void * peekRear(struct Queue * queue);
-void * peekFront(struct Queue * queue);
-
+void enqueue(struct Queue* queue, void* data);
+void* dequeue(struct Queue* queue);
+void* peek(struct Queue* queue);
+void shiftQueue(struct Queue* queue, int n);
+void freeQueue(struct Queue* queue);
 
 #endif CIRCULARQUEUE_H

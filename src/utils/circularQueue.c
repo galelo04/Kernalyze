@@ -1,91 +1,82 @@
 #include "circularQueue.h"
-
-#include <errno.h>
-#include <stddef.h>
-#include <stdio.h>
 #include <stdlib.h>
 
 struct Queue* createQueue() {
     struct Queue* q = (struct Queue*)malloc(sizeof(struct Queue));
-    q->front = q->rear = NULL;
+    q->rear = NULL;
+    q->size = 0;
     return q;
 }
-// Function to insert element in a Circular queue
-void enqueueRear(struct Queue* queue, void* data) {
+
+void enqueue(struct Queue* queue, void* data) {
+    if (queue == NULL) {
+        return;
+    }
     struct Node* newNode = createNode(data);
 
-    if (queue->front == NULL)
-        queue->front = newNode;
-    else
-        queue->rear->next = newNode;
-
-    queue->rear = newNode;
-    queue->rear->next = queue->front;
-}
-void enqueueFront(struct Queue* queue, void* data){
-
-    struct Node* newNode = createNode(data);
-
-    if (queue->rear == NULL)
+    if (queue->rear == NULL) {
         queue->rear = newNode;
-    else
-        queue->front->next = newNode;
-
-    queue->front = newNode;
-    queue->front->next = queue->rear;
-
+        queue->rear->next = queue->rear;  // Point to itself
+    } else {
+        newNode->next = queue->rear->next;  // New node points to front
+        queue->rear->next = newNode;        // Rear points to new node
+        queue->rear = newNode;              // Update rear to new node
+    }
+    ++queue->size;
 }
-void dequeueRear(struct Queue* queue){
-    // if queue is empty
-    if (queue->front == NULL) {
+
+void* dequeue(struct Queue* queue) {
+    if (queue == NULL || queue->rear == NULL) {
         return;
     }
 
-    // If this is the last node to be deleted
-    if (queue->front == queue->rear) {
-        free(queue->front);
-        queue->front = queue->rear = NULL;
+    struct Node* front = queue->rear->next;  // Get front node
+    void* data = front->data;                // Store data to return
+    if (front == queue->rear) {
+        free(front);
+        queue->rear = NULL;
     } else {
-        struct Node* current = queue->front;
-        
-        // Find the node before rear
-        while (current->next != queue->rear) {
-            current = current->next;
-        }
-        
-        // Remove the rear node
-        free(queue->rear);
-        queue->rear = current;
-        queue->rear->next = queue->front;
+        queue->rear->next = front->next;  // Rear points to next node
+        free(front);
+    }
+
+    --queue->size;
+    if (queue->size == 0) {
+        queue->rear = NULL;  // Reset rear if queue is empty
+    }
+    return data;  // Return dequeued data
+}
+
+void* peek(struct Queue* queue) {
+    if (queue == NULL || queue->rear == NULL) {
+        return;
+    }
+    return queue->rear->next->data;  // Return front node data
+}
+
+void shiftQueue(struct Queue* queue, int n) {
+    if (queue->rear == NULL || n <= 0) {
+        return;  // Queue is empty or no shift needed
+    }
+
+    for (int i = 0; i < n; ++i) {
+        queue->rear = queue->rear->next;
     }
 }
 
-void dequeueFront(struct Queue* queue){
-
-    // if queue is empty
-    if (queue->front == NULL) {
-        return ;
+void destroyQueue(struct Queue* queue) {
+    if (queue == NULL) {
+        return;
     }
 
-    // If this is the last node to be deleted
-    if (queue->front == queue->rear) {
-        free(queue->front);
-        queue->front = queue->rear = NULL;
-    } else {
-        struct Node* temp = queue->front;
-        queue->front = queue->front->next;
-        queue->rear->next = queue->front;
-        free(temp);
-    }
+    struct Node* current = queue->rear->next;  // Start from front
+    struct Node* nextNode;
 
-}
+    do {
+        nextNode = current->next;
+        free(current);
+        current = nextNode;
+    } while (current != queue->rear->next);
 
-void* peekFront(struct Queue* queue){
-    if(queue->front==NULL)return NULL;
-    return queue->front->data;
-}
-void* peekRear(struct Queue* queue){
-    if(queue->rear==NULL)return NULL;
-    return queue->rear->data;
-
+    free(queue);
 }
