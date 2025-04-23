@@ -7,7 +7,6 @@ struct List {
     int size;
 };
 
-struct Node* createNode(void *data);
 
 struct List* createList();
 
