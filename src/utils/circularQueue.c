@@ -11,7 +11,7 @@ struct Queue* createQueue() {
     return q;
 }
 // Function to insert element in a Circular queue
-void enQueueRear(struct Queue* queue, void* data) {
+void enqueueRear(struct Queue* queue, void* data) {
     struct Node* newNode = createNode(data);
 
     if (queue->front == NULL)
@@ -22,7 +22,7 @@ void enQueueRear(struct Queue* queue, void* data) {
     queue->rear = newNode;
     queue->rear->next = queue->front;
 }
-void enQueueFront(struct Queue* queue, void* data){
+void enqueueFront(struct Queue* queue, void* data){
 
     struct Node* newNode = createNode(data);
 
@@ -35,7 +35,7 @@ void enQueueFront(struct Queue* queue, void* data){
     queue->front->next = queue->rear;
 
 }
-void deQueueRear(struct Queue* queue){
+void dequeueRear(struct Queue* queue){
     // if queue is empty
     if (queue->front == NULL) {
         return;
@@ -60,7 +60,7 @@ void deQueueRear(struct Queue* queue){
     }
 }
 
-void deQueueFront(struct Queue* queue){
+void dequeueFront(struct Queue* queue){
 
     // if queue is empty
     if (queue->front == NULL) {
