@@ -9,11 +9,13 @@
 #include <signal.h>
 
 int main(int argc, char* argv[]) {
-    for (int i = 0; i < argc; ++i) {
-        printf("arg %d: %s\n", i, argv[i]);
-    }
-
     sync_clk();
+
+    for (int i = 0; i < argc; ++i) {
+        printf("arg %d: %s ", i, argv[i]);
+    }
+    printf("\n");
+    fflush(stdout);
 
     int id = atoi(argv[1]);
     int runningTime = atoi(argv[2]);
@@ -35,18 +37,16 @@ int main(int argc, char* argv[]) {
         return -1;
     }
     *remainingTime = runningTime;
-    printf("[Process] %d: remainingTime=%d\n", atoi(argv[1]), *remainingTime);
-    // Simulate process execution
     int oldClk = get_clk();
     int currentTime;
-    while (1) {
+    printf("\x1b[34m[Process %d]\x1b[0m: remainingTime: %d at: %d\n", atoi(argv[1]), *remainingTime,
+           oldClk);  // Simulate process execution
+    while (*remainingTime > 0) {
         if ((currentTime = get_clk()) != oldClk) {
             (*remainingTime)--;
-            printf("[Process] %d: remainingTime=%d\n", atoi(argv[1]), *remainingTime);
+            printf("\x1b[34m[Process %d]\x1b[0m: remainingTime: %d at: %d\n", atoi(argv[1]),
+                   *remainingTime, currentTime);
             oldClk = currentTime;
-        }
-        if (*remainingTime <= 0) {
-            break;
         }
     }
 
