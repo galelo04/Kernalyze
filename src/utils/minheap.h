@@ -62,7 +62,7 @@ void heapify(heap* h, int index);
 heap* heap_create(void);
 
 // Extract the minimum element from the heap
-void* heap_extract_min(heap* h);
+void heap_extract_min(heap* h, void* data, int* priority);
 
 // Insert a new element into the heap
 void heap_insert(heap* h, void* data, int priority);
