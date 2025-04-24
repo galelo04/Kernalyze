@@ -21,4 +21,6 @@ void stopProcess(struct PCB* pcb);
 void recrodProcessFinish(struct PCB* pcb, int finishTime);
 void calculatePerformance();
 
+void schedule();
+
 #endif
