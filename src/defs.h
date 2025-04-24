@@ -6,6 +6,7 @@
 #define MSG_TYPE_PCB 1
 #define MSG_QUEUE_KEYFILE "keyfolder/queueKey.txt"
 #define SHM_KEYFILE "keyfolder/shmKey.txt"
+#define SEM_KEYFILE "keyfolder/semKey.txt"
 #define PROCESS_PATH "./process"
 
 typedef enum { READY, RUNNING, FINISHED } PROCESS_STATE;

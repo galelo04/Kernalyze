@@ -46,6 +46,7 @@ keyfile:
 	@mkdir -p keyfolder
 	@touch keyfolder/queueKey.txt
 	@touch keyfolder/shmKey.txt
+	@touch keyfolder/semKey.txt
 
 # Clean up object files and executables
 clean:
