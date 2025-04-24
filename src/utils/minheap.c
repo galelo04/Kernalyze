@@ -105,11 +105,11 @@ void heapify(heap* h, int index) {
 }
 
 // Extract the minimum element from the heap
-void heap_extract_min(heap* h, void* data, int* priority) {
+int heap_extract_min(heap* h, void* data, int* priority) {
     // Checking if the heap is empty
     if (h->size == 0) {
         printf("\nHeap is empty.\n");
-        return NULL;
+        return 0;
     }
 
     // Get the minimum node (root of the heap)
@@ -118,7 +118,13 @@ void heap_extract_min(heap* h, void* data, int* priority) {
     // If there's only one element
     if (h->size == 1) {
         h->size = 0;
-        return min_node;
+        h->vector->size = 0;
+
+        void* data = min_node->data;
+        int priority = min_node->priority;
+        free(min_node);
+
+        return 1;
     }
 
     // Replace the root with the last element
@@ -136,6 +142,8 @@ void heap_extract_min(heap* h, void* data, int* priority) {
     void* data = min_node->data;
     int priority = min_node->priority;
     free(min_node);
+
+    return 1;
 }
 
 // Insert a new element into the heap
