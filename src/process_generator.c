@@ -3,13 +3,15 @@
 #include <stdlib.h>
 #include <sys/types.h>  // for pid_t
 #include <unistd.h>     // for fork, execl
-#include "utils/console_logger.h"
 #include <sys/msg.h>    // for msgget, msgsnd
+#include <sys/wait.h>
 
 #include "clk.h"
 #include "scheduler.h"
+#include "utils/console_logger.h"
 
 void clear_resources(int);
+void checkChildProcess(int);
 
 void sendPCBtoScheduler(struct PCB* pcb);
 struct PCB* newPCB(int id, int arriveTime, int runningTime, int priority);
@@ -18,6 +20,8 @@ void initProcessGenerator();
 
 pid_t createClk();
 pid_t createSheduler(int type, int quantum);
+pid_t clk_pid;
+pid_t sheduler_pid;
 
 int pgMsgqid = -1;
 
@@ -28,9 +32,10 @@ int main(int argc, char* argv[]) {
 
     initProcessGenerator();
     int old_clk = 0;
-    pid_t clk_pid = createClk();
-    pid_t sheduler_pid = createSheduler(0, 1);
+    clk_pid = createClk();
+    sheduler_pid = createSheduler(0, 1);
     signal(SIGINT, clear_resources);
+    signal(SIGCHLD, checkChildProcess);
     sync_clk();
     while (1) {
         int current_clk = get_clk();
@@ -41,8 +46,8 @@ int main(int argc, char* argv[]) {
             break;
         }
 
-        if (current_clk == 3 || current_clk == 4 || current_clk == 5) {
-            struct PCB* pcb = newPCB(current_clk, current_clk, 4, 1);
+        if (current_clk == 3 || current_clk == 4) {
+            struct PCB* pcb = newPCB(current_clk, current_clk, 2, 1);
             if (pcb != NULL) {
                 sendPCBtoScheduler(pcb);
                 free(pcb);
@@ -137,4 +142,29 @@ pid_t createSheduler(int type, int quantum) {
         exit(0);
     }
     return pid;
+}
+
+void checkChildProcess(int signum) {
+    pid_t pid;
+    int status;
+
+    while ((pid = waitpid(-1, &status, WNOHANG)) > 0) {
+        if (pid == clk_pid) {
+            if (WIFEXITED(status)) {
+                int exit_code = WEXITSTATUS(status);
+                printInfo("PG", "Clock process terminated with exit code %d\n", exit_code);
+            } else if (WIFSIGNALED(status)) {
+                int signal_number = WTERMSIG(status);
+                printInfo("PG", "Clock process terminated by signal %d\n", signal_number);
+            }
+        } else if (pid == sheduler_pid) {
+            if (WIFEXITED(status)) {
+                int exit_code = WEXITSTATUS(status);
+                printInfo("PG", "Scheduler process terminated with exit code %d\n", exit_code);
+            } else if (WIFSIGNALED(status)) {
+                int signal_number = WTERMSIG(status);
+                printInfo("PG", "Scheduler process terminated by signal %d\n", signal_number);
+            }
+        }
+    }
 }
