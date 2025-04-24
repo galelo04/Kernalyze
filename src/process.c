@@ -1,7 +1,8 @@
+#include <signal.h>
 #include <stdio.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <signal.h>
+
 #include "clk.h"
 
 void run_process(int runtime) {
@@ -26,8 +27,8 @@ void run_process(int runtime) {
         last_clock = get_clk();
         remaining_time--;
 
-        printf("Process %d: Executed for 1 second, %d seconds remaining at time %d.\n", 
-               getpid(), remaining_time, last_clock);
+        printf("Process %d: Executed for 1 second, %d seconds remaining at time %d.\n", getpid(),
+               remaining_time, last_clock);
     }
 
     printf("Process %d: Finished CPU-bound work.\n", getpid());
@@ -39,21 +40,10 @@ void run_process(int runtime) {
         if (kill(-parent_pgid, SIGUSR1) == -1) {
             perror("Process: Failed to send SIGUSR1 to parent process group");
         } else {
-            printf("Process %d: Sent SIGUSR1 to parent process group %d at time %d.\n", 
-                   getpid(), parent_pgid, get_clk());
+            printf("Process %d: Sent SIGUSR1 to parent process group %d at time %d.\n", getpid(),
+                   parent_pgid, get_clk());
         }
     }
 
     destroy_clk(0);
-}
-
-//main I do not know if we will need it but here it is
-int main(int argc, char *argv[]) {
-    if (argc != 2) {
-        fprintf(stderr, "Usage: %s <runtime>\n", argv[0]);
-        return 1;
-    }
-    int runtime = atoi(argv[1]);
-    run_process(runtime);
-    return 0;
 }
