@@ -14,5 +14,7 @@ void* dequeue(struct Queue* queue);
 void* peek(struct Queue* queue);
 void shiftQueue(struct Queue* queue, int n);
 void freeQueue(struct Queue* queue);
+void printQueue(struct Queue* queue, void (*printFunc)(void*));
+int isEmpty(struct Queue* queue);
 
 #endif  // CIRCULARQUEUE_H

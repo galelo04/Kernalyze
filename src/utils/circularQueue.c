@@ -1,5 +1,6 @@
 #include "circularQueue.h"
 #include <stdlib.h>
+#include <stdio.h>
 
 struct Queue* createQueue() {
     struct Queue* q = (struct Queue*)malloc(sizeof(struct Queue));
@@ -80,3 +81,19 @@ void destroyQueue(struct Queue* queue) {
 
     free(queue);
 }
+
+void printQueue(struct Queue* queue, void (*printFunc)(void*)) {
+    if (queue == NULL || queue->rear == NULL) {
+        return;
+    }
+    printf("[Queue] ");
+    struct Node* current = queue->rear->next;  // Start from front
+    do {
+        printFunc(current->data);
+        current = current->next;
+    } while (current != queue->rear->next);
+    printf("\n");
+    fflush(stdout);
+}
+
+int isEmpty(struct Queue* queue) { return queue->size == 0; }
