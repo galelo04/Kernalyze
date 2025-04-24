@@ -31,10 +31,16 @@ struct PCB {
     int shmID;
     void* shmAddr;
 };
+struct ProcessData {
+    int id;
+    int arriveTime;
+    int runningTime;
+    int priority;
+};
 
 struct PCBMessage {
     long mtype;
-    struct PCB pcb;
+    struct ProcessData pdata;
 };
 
 #endif  // DEFS_H

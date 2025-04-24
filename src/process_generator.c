@@ -13,8 +13,8 @@
 void clear_resources(int);
 void checkChildProcess(int);
 
-void sendPCBtoScheduler(struct PCB* pcb);
-struct PCB* newPCB(int id, int arriveTime, int runningTime, int priority);
+void sendProcesstoScheduler(struct ProcessData* pcb);
+struct ProcessData* newProcessData(int id, int arriveTime, int runningTime, int priority);
 
 void initProcessGenerator();
 
@@ -31,29 +31,29 @@ int main(int argc, char* argv[]) {
     }
 
     initProcessGenerator();
-    int old_clk = 0;
+    int oldClk = 0;
     clk_pid = createClk();
     sheduler_pid = createSheduler(0, 1);
     signal(SIGINT, clear_resources);
     signal(SIGCHLD, checkChildProcess);
     sync_clk();
     while (1) {
-        int current_clk = get_clk();
-        if (current_clk == old_clk) continue;
-        old_clk = current_clk;
+        int currentClk = get_clk();
+        if (currentClk == oldClk) continue;
+        oldClk = currentClk;
 
-        if (current_clk > 15) {
+        if (currentClk > 15) {
             break;
         }
 
-        if (current_clk == 3 || current_clk == 4) {
-            struct PCB* pcb = newPCB(current_clk, current_clk, 2, 1);
-            if (pcb != NULL) {
-                sendPCBtoScheduler(pcb);
-                free(pcb);
+        if (currentClk == 3 || currentClk == 4) {
+            struct ProcessData* pdata = newProcessData(currentClk, currentClk, 2, 1);
+            if (pdata != NULL) {
+                sendProcesstoScheduler(pdata);
+                free(pdata);
             }
         } else {
-            sendPCBtoScheduler(NULL);
+            sendProcesstoScheduler(NULL);
         }
     }
 
@@ -85,34 +85,34 @@ void clear_resources(__attribute__((unused)) int signum) {
     exit(0);
 }
 
-void sendPCBtoScheduler(struct PCB* pcb) {
+void sendProcesstoScheduler(struct ProcessData* pdata) {
     struct PCBMessage msg;
     msg.mtype = MSG_TYPE_PCB;
-    if (pcb == NULL) {
-        msg.pcb.id = -1;
-        msg.pcb.arriveTime = -1;
-        msg.pcb.runningTime = -1;
-        msg.pcb.priority = -1;
+    if (pdata == NULL) {
+        msg.pdata.id = -1;
+        msg.pdata.arriveTime = -1;
+        msg.pdata.runningTime = -1;
+        msg.pdata.priority = -1;
     } else
-        msg.pcb = *pcb;
+        msg.pdata = *pdata;
 
-    if (msgsnd(pgMsgqid, &msg, sizeof(struct PCB), 0) == -1) {
+    if (msgsnd(pgMsgqid, &msg, sizeof(struct ProcessData), 0) == -1) {
         perror("msgsnd");
         exit(1);
     }
 }
 
-struct PCB* newPCB(int id, int arriveTime, int runningTime, int priority) {
-    struct PCB* pcb = (struct PCB*)malloc(sizeof(struct PCB));
-    if (pcb == NULL) {
-        perror("Failed to allocate memory for PCB");
+struct ProcessData* newProcessData(int id, int arriveTime, int runningTime, int priority) {
+    struct ProcessData* pdata = (struct ProcessData*)malloc(sizeof(struct ProcessData));
+    if (pdata == NULL) {
+        perror("Failed to allocate memory for ProcessData");
         return NULL;
     }
-    pcb->id = id;
-    pcb->arriveTime = arriveTime;
-    pcb->runningTime = runningTime;
-    pcb->priority = priority;
-    return pcb;
+    pdata->id = id;
+    pdata->arriveTime = arriveTime;
+    pdata->runningTime = runningTime;
+    pdata->priority = priority;
+    return pdata;
 }
 
 pid_t createClk() {
@@ -144,7 +144,7 @@ pid_t createSheduler(int type, int quantum) {
     return pid;
 }
 
-void checkChildProcess(int signum) {
+void checkChildProcess(__attribute__((unused))int signum) {
     pid_t pid;
     int status;
 
