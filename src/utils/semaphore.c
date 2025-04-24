@@ -1,4 +1,5 @@
 #include "semaphore.h"
+#include "../defs.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -10,8 +11,14 @@ union semun {
     int val;
 };  // Union for semctl arguments
 
-int init_semaphore(void) {
-    int semid = semget(IPC_PRIVATE, 1, IPC_CREAT | 0666);
+int init_semaphore(int id) {
+    key_t key = ftok(SEM_KEYFILE, id);  // Generate a unique key for the semaphore
+    if (key == -1) {
+        perror("ftok failed");
+        exit(1);
+    }
+    // Create a semaphore set with one semaphore
+    int semid = semget(key, 1, IPC_CREAT | 0666);
     if (semid == -1) {
         perror("semget failed");
         exit(1);
