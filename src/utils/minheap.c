@@ -8,7 +8,7 @@ int get_node_priority(void* node_ptr) {
 }
 
 // Define a createHeap function
-heap* createHeap() {
+heap* heap_create() {
     // Allocating memory to heap h
     heap* h = (heap*)malloc(sizeof(heap));
 
@@ -105,7 +105,7 @@ void heapify(heap* h, int index) {
 }
 
 // Extract the minimum element from the heap
-void* extractMin(heap* h) {
+void* heap_extract_min(heap* h) {
     // Checking if the heap is empty
     if (h->size == 0) {
         printf("\nHeap is empty.\n");
@@ -140,7 +140,7 @@ void* extractMin(heap* h) {
 }
 
 // Insert a new element into the heap
-void insert(heap* h, void* data, int priority) {
+void heap_insert(heap* h, void* data, int priority) {
     // Create a new heap node
     heap_node* new_node = (heap_node*)malloc(sizeof(heap_node));
     if (new_node == NULL) {
@@ -163,7 +163,7 @@ void insert(heap* h, void* data, int priority) {
 }
 
 // Print the heap's priorities (for debugging)
-void printHeap(heap* h) {
+void heap_print(heap* h) {
     printf("Heap contents (priorities): ");
     for (int i = 0; i < h->size; i++) {
         heap_node* node = (heap_node*)vector_get(h->vector, i);
@@ -177,7 +177,7 @@ void printHeap(heap* h) {
 }
 
 // Function to free the heap and all its nodes
-void destroyHeap(heap* h) {
+void heap_destroy(heap* h) {
     if (h == NULL) {
         return;
     }

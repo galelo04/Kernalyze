@@ -52,25 +52,25 @@ typedef struct {
 // Function to get the priority of a heap node
 int get_node_priority(void* node_ptr);
 
-// Define a createHeap function
-heap* createHeap();
-
 // Defining insertHelper function (bubble up)
 void insertHelper(heap* h, int index);
 
 // Heapify function (bubble down)
 void heapify(heap* h, int index);
 
+// Define a createHeap function
+heap* heap_create(void);
+
 // Extract the minimum element from the heap
-void* extractMin(heap* h);
+void* heap_extract_min(heap* h);
 
 // Insert a new element into the heap
-void insert(heap* h, void* data, int priority);
+void heap_insert(heap* h, void* data, int priority);
 
 // Print the heap's priorities (for debugging)
-void printHeap(heap* h);
+void heap_print(const heap* h);
 
 // Function to free the heap and all its nodes
-void destroyHeap(heap* h);
+void heap_destroy(heap* h);
 
 #endif
