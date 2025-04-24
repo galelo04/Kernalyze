@@ -19,4 +19,4 @@
 #define ANSI_COLOR_BOLD_CYAN "\x1b[1;36m"
 #define ANSI_COLOR_BOLD_WHITE "\x1b[1;37m"
 
-#endif // COLORS_H
+#endif  // COLORS_H

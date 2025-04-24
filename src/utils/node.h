@@ -4,11 +4,11 @@
 #include <stddef.h>
 
 struct Node {
-    void * data;
-    struct Node* next;
+    void *data;
+    struct Node *next;
 };
 
-struct Node* createNode(void *data){
+struct Node *createNode(void *data) {
     struct Node *newNode = (struct Node *)malloc(sizeof(struct Node));
     if (!newNode) {
         perror("malloc: ");
@@ -16,7 +16,7 @@ struct Node* createNode(void *data){
     }
     newNode->data = data;
     newNode->next = NULL;
-    return newNode; 
+    return newNode;
 }
 
 #endif

@@ -4,12 +4,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-
-
 typedef struct {
-    void **data;     // Pointer to array of elements (void pointers for flexibility)
-    int size;        // Current number of elements
-    int capacity;    // Current capacity of the vector
+    void** data;   // Pointer to array of elements (void pointers for flexibility)
+    int size;      // Current number of elements
+    int capacity;  // Current capacity of the vector
 } Vector;
 
 // Function to create a new vector with initial capacity

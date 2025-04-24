@@ -17,7 +17,7 @@ heap* createHeap() {
         printf("Memory error\n");
         return NULL;
     }
-    
+
     // set the initial size to 0
     h->size = 0;
 
@@ -42,15 +42,15 @@ void insertHelper(heap* h, int index) {
 
     // Store parent of element at index
     int parent = (index - 1) / 2;
-    
+
     // Get node pointers from the vector
     heap_node* current_node = (heap_node*)vector_get(h->vector, index);
     heap_node* parent_node = (heap_node*)vector_get(h->vector, parent);
-    
+
     if (parent_node == NULL || current_node == NULL) {
         return;  // Safety check
     }
-    
+
     // If current node's priority is less than parent's priority, swap them
     if (current_node->priority < parent_node->priority) {
         // Swap the nodes in the vector
@@ -72,18 +72,18 @@ void heapify(heap* h, int index) {
     if (left < h->size) {
         heap_node* left_node = (heap_node*)vector_get(h->vector, left);
         heap_node* current_node = (heap_node*)vector_get(h->vector, smallest);
-        
-        if (left_node != NULL && current_node != NULL && 
+
+        if (left_node != NULL && current_node != NULL &&
             left_node->priority < current_node->priority) {
             smallest = left;
         }
     }
-    
+
     if (right < h->size) {
         heap_node* right_node = (heap_node*)vector_get(h->vector, right);
         heap_node* smallest_node = (heap_node*)vector_get(h->vector, smallest);
-        
-        if (right_node != NULL && smallest_node != NULL && 
+
+        if (right_node != NULL && smallest_node != NULL &&
             right_node->priority < smallest_node->priority) {
             smallest = right;
         }
@@ -94,7 +94,7 @@ void heapify(heap* h, int index) {
         // Get node pointers
         heap_node* smallest_node = (heap_node*)vector_get(h->vector, smallest);
         heap_node* current_node = (heap_node*)vector_get(h->vector, index);
-        
+
         // Swap the nodes
         vector_set(h->vector, smallest_node, index);
         vector_set(h->vector, current_node, smallest);
@@ -114,24 +114,24 @@ heap_node* extractMin(heap* h) {
 
     // Get the minimum node (root of the heap)
     heap_node* min_node = (heap_node*)vector_get(h->vector, 0);
-    
+
     // If there's only one element
     if (h->size == 1) {
         h->size = 0;
         return min_node;
     }
-    
+
     // Replace the root with the last element
     heap_node* last_node = (heap_node*)vector_get(h->vector, h->size - 1);
     vector_set(h->vector, last_node, 0);
-    
+
     // Decrement the size
     h->size--;
     h->vector->size = h->size;  // Keep vector size synchronized
-    
+
     // Restore heap property
     heapify(h, 0);
-    
+
     return min_node;
 }
 
@@ -143,17 +143,17 @@ void insert(heap* h, void* data, int priority) {
         printf("Memory allocation error\n");
         return;
     }
-    
+
     // Set the node's data and priority
     new_node->data = data;
     new_node->priority = priority;
-    
+
     // Add the new node to the vector
     vector_push(h->vector, new_node);
-    
+
     // Update heap size
     h->size = h->vector->size;
-    
+
     // Maintain heap property by bubbling up the new node
     insertHelper(h, h->size - 1);
 }
@@ -177,7 +177,7 @@ void destroyHeap(heap* h) {
     if (h == NULL) {
         return;
     }
-    
+
     // Free all heap nodes
     for (int i = 0; i < h->vector->size; i++) {
         heap_node* node = (heap_node*)vector_get(h->vector, i);
@@ -185,10 +185,10 @@ void destroyHeap(heap* h) {
             free(node);
         }
     }
-    
+
     // Free the vector
     vector_free(h->vector);
-    
+
     // Free the heap structure
     free(h);
 }
