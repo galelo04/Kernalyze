@@ -16,7 +16,7 @@ struct PCB* newPCB(int id, int arriveTime, int runningTime, int priority);
 void initProcessGenerator();
 
 pid_t createClk();
-pid_t createSheduler(int type);
+pid_t createSheduler(int type, int quantum);
 
 int pgMsgqid = -1;
 
@@ -28,7 +28,7 @@ int main(int argc, char* argv[]) {
     initProcessGenerator();
     int old_clk = 0;
     pid_t clk_pid = createClk();
-    pid_t sheduler_pid = createSheduler(0);
+    pid_t sheduler_pid = createSheduler(0, 1);
     signal(SIGINT, clear_resources);
     sync_clk();
     while (1) {
@@ -36,20 +36,18 @@ int main(int argc, char* argv[]) {
         if (current_clk == old_clk) continue;
         old_clk = current_clk;
 
-        if (current_clk > 8) {
+        if (current_clk > 15) {
             break;
         }
 
-        if (current_clk == 3) {
-            struct PCB* pcb = newPCB(0, current_clk, 2, 1);
+        if (current_clk == 3 || current_clk == 4 || current_clk == 5) {
+            struct PCB* pcb = newPCB(current_clk, current_clk, 4, 1);
             if (pcb != NULL) {
                 sendPCBtoScheduler(pcb);
-                printf("[pg] Process %d is sent to the scheduler\n", pcb->id);
                 free(pcb);
             }
         } else {
             sendPCBtoScheduler(NULL);
-            printf("[pg] No new process to send to the scheduler\n");
         }
     }
 
@@ -126,14 +124,14 @@ pid_t createClk() {
     return pid;
 }
 
-pid_t createSheduler(int type) {
+pid_t createSheduler(int type, int quantum) {
     pid_t pid = fork();
     if (pid == -1) {
         perror("Failed to fork for sheduler");
         exit(1);
     }
     if (pid == 0) {
-        init_scheduler(type);
+        init_scheduler(type, quantum);
         run_scheduler();
         exit(0);
     }
