@@ -33,7 +33,7 @@ int main(int argc, char* argv[]) {
     initProcessGenerator();
     int oldClk = 0;
     clk_pid = createClk();
-    sheduler_pid = createSheduler(0, 1);
+    sheduler_pid = createSheduler(0, 2);
     signal(SIGINT, clear_resources);
     signal(SIGCHLD, checkChildProcess);
     sync_clk();
@@ -46,8 +46,14 @@ int main(int argc, char* argv[]) {
             break;
         }
 
-        if (currentClk == 3 || currentClk == 4) {
-            struct ProcessData* pdata = newProcessData(currentClk, currentClk, 2, 1);
+        if (currentClk == 1) {
+            struct ProcessData* pdata = newProcessData(1, currentClk, 6, 1);
+            if (pdata != NULL) {
+                sendProcesstoScheduler(pdata);
+                free(pdata);
+            }
+        } else if (currentClk == 3) {
+            struct ProcessData* pdata = newProcessData(2, currentClk, 3, 1);
             if (pdata != NULL) {
                 sendProcesstoScheduler(pdata);
                 free(pdata);
@@ -129,7 +135,10 @@ pid_t createClk() {
     }
     return pid;
 }
-
+/*
+@param type 0 for RR, 1 for SRTN, 2 for HPF
+@param quantum quantum time for RR
+*/
 pid_t createSheduler(int type, int quantum) {
     pid_t pid = fork();
     if (pid == -1) {
@@ -144,7 +153,7 @@ pid_t createSheduler(int type, int quantum) {
     return pid;
 }
 
-void checkChildProcess(__attribute__((unused))int signum) {
+void checkChildProcess(__attribute__((unused)) int signum) {
     pid_t pid;
     int status;
 

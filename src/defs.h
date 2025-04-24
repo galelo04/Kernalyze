@@ -9,7 +9,7 @@
 #define SEM_KEYFILE "keyfolder/semKey.txt"
 #define PROCESS_PATH "./process"
 
-typedef enum { READY, RUNNING, FINISHED } PROCESS_STATE;
+typedef enum { INITIAL, READY, RUNNING, FINISHED } PROCESS_STATE;
 struct PCB {
     // Data from the file
     int id;
