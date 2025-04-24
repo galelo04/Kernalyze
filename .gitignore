@@ -55,5 +55,6 @@ bin
 obj
 processes.txt
 .vscode
-keyfile
+keyfolder
 ./os-sim
+./process
