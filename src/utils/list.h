@@ -3,19 +3,16 @@
 #include "node.h"
 
 struct List {
-    struct Node* head;
+    struct Node *head;
     int size;
 };
 
+struct List *createList();
 
-struct List* createList();
+void insertAtFront(struct List *list, void *data);
 
-void insertAtFront(struct List* list, void * data);
+void freeList(struct List *list);
 
-void freeList(struct List* list);
-
-void *findInList(struct List *list, void *data, int (*cmp)(void *, void *)); 
+void *findInList(struct List *list, void *data, int (*cmp)(void *, void *));
 
 #endif
-
-

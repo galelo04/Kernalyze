@@ -5,10 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-
-
-
-struct List* createList(){
+struct List *createList() {
     struct List *list = (struct List *)malloc(sizeof(struct List));
     if (!list) {
         perror("malloc: ");
@@ -19,14 +16,14 @@ struct List* createList(){
     return list;
 }
 
-void insertAtFront(struct List* list, void * data){
+void insertAtFront(struct List *list, void *data) {
     struct Node *newNode = createNode(data);
     newNode->next = list->head;
     list->head = newNode;
     list->size++;
 }
 
-void freeList(struct List* list){
+void freeList(struct List *list) {
     struct Node *temp;
     while (list->head) {
         temp = list->head;
@@ -37,9 +34,8 @@ void freeList(struct List* list){
     free(list);
 }
 
-
-/* cmp is a function pointer to a compare function it takes two void 
-pointers to the data needed to be compared 
+/* cmp is a function pointer to a compare function it takes two void
+pointers to the data needed to be compared
 and return 0 if equal*/
 void *findInList(struct List *list, void *data, int (*cmp)(void *, void *)) {
     struct Node *temp = list->head;

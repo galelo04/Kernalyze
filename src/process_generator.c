@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <sys/types.h>  // for pid_t
 #include <unistd.h>     // for fork, execl
+#include "utils/console_logger.h"
 #include <sys/msg.h>    // for msgget, msgsnd
 
 #include "clk.h"

@@ -1,5 +1,7 @@
 #ifndef SCHEDULER_H
 #define SCHEDULER_H
+#include <sys/types.h>
+
 #include "clk.h"
 #include "defs.h"
 
