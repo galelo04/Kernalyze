@@ -35,7 +35,7 @@ int main(int argc, char* argv[]) {
 
     initProcessGenerator();
     clk_pid = createClk();
-    sheduler_pid = createSheduler(1, 1);
+    sheduler_pid = createSheduler(0, 1);
     signal(SIGINT, clear_resources);
     signal(SIGCHLD, checkChildProcess);
     sync_clk();
