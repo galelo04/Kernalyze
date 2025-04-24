@@ -7,7 +7,9 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-struct ListPCB *pcbTable;
+#include "utils/list.h"
+
+struct List *pcbTable;
 
 int idleTime = 0;  // time scheduler waiting and no process in the ready list
 
@@ -40,7 +42,7 @@ struct PCB *checkForNewArrivals() {
     pcb->executionTime = 0;
     pcb->state = READY;
 
-    insertAtFront(pcbTable, *pcb);
+    insertAtFront(pcbTable, pcb);
 
     return pcb;
 }
