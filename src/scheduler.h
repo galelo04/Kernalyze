@@ -3,22 +3,22 @@
 #include "clk.h"
 #include "utils.h"
 
-void proccessGeneratorSignalHandler(int signum);
+// handle process generator signal
+int fetchProcessFromQueue();
 
-void run_scheduler();
+// handle process exit signal
+void processExitSignalHandler(int signum);
 
 void init_scheduler();
+void run_scheduler();
 
-struct PCB* fetchNewProcess();
-
-pid_t startProcess(struct PCB* pcb);
-
+// proccess control
+void startProcess(struct PCB* pcb);
 void resumeProcess(struct PCB* pcb);
-
 void stopProcess(struct PCB* pcb);
 
+// calculate performance
 void recrodProcessFinish(struct PCB* pcb, int finishTime);
-
 void calculatePerformance();
 
 #endif

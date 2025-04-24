@@ -1,9 +1,12 @@
 #ifndef DEFS_H
 #define DEFS_H
 #include <sys/types.h>
+#include <sys/ipc.h>
 
 #define MSG_TYPE_PCB 1
-#define MSG_QUEUE_KEYFILE "keyfile/key.txt"
+#define MSG_QUEUE_KEYFILE "keyfolder/queueKey.txt"
+#define SHM_KEYFILE "keyfolder/shmKey.txt"
+#define PROCESS_PATH "./process"
 
 typedef enum { READY, RUNNING, FINISHED } PROCESS_STATE;
 struct PCB {
@@ -14,13 +17,18 @@ struct PCB {
     int runningTime;
     // Data filled by the scheduler
     pid_t pid;
-    int remainingTime;
+    int* remainingTime;
     int waitTime;
     int startTime;
     int finishTime;
     double turnaroundTime;
     double weightedTurnaroundTime;
     PROCESS_STATE state;
+
+    // Shared memory
+    key_t shmKey;
+    int shmID;
+    void* shmAddr;
 };
 
 struct PCBMessage {
