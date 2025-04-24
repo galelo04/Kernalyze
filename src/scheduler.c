@@ -10,9 +10,11 @@
 #include <sys/ipc.h>
 #include <sys/msg.h>
 #include <sys/shm.h>
+#include "defs.h"
+#include "utils/list.h"
 
-struct ListPCB *pcbTable;
-struct NodePCB *currentProcess = NULL;
+struct List *pcbTable;
+struct Node *currentProcess = NULL;
 int totalTime = 0;  // total time scheduler running
 
 int idleTime = 0;  // time scheduler waiting and no process in the ready list
@@ -49,7 +51,7 @@ void run_scheduler() {
             if (pcbTable->size == 0) {
                 idleTime++;
             } else {
-                struct PCB *pcb = &pcbTable->head->data;
+                struct PCB *pcb = (struct PCB *)pcbTable->head->data;
                 if (pcb->state == READY) {
                     // Start the process
                     startProcess(pcb);
@@ -97,7 +99,7 @@ int fetchProcessFromQueue() {
     pcb->turnaroundTime = 0;
     pcb->weightedTurnaroundTime = 0;
 
-    insertAtFront(pcbTable, *pcb);
+    insertAtFront(pcbTable, (void *)pcb);
 
     // Debugging
     printf("[Scheduler] Process %d is added to the ready list\n", pcb->id);
@@ -197,15 +199,6 @@ void recrodProcessFinish(struct PCB *pcb, int finishTime) {
 }
 
 void calculatePerformance(int totalTime, int idleTime) {
-    // struct NodePCB * current = pcbTable->head;
-    // int sumWait = 0 ;
-    // double sumWTA = 0;
-    // while(current){
-    //     sumWait+= current->data.waitTime;
-    //     sumWTA+=current->data.weightedTurnaroundTime;
-    // }
-    // double AWait  = sumWait/pcbTable->size;
-    // double AWTA = sumWTA/pcbTable->size;
     double cpuUtilization = 100 * (totalTime - idleTime / (double)totalTime);
 
     // write to the scheduler.pref
@@ -225,10 +218,11 @@ void processExitSignalHandler(__attribute__((unused)) int signum) {
         return;
     }
     // Find the PCB of the exited process
-    struct NodePCB *current = pcbTable->head;
+    struct Node *current = pcbTable->head;
     while (current != NULL) {
-        if (current->data.pid == pid) {
-            recrodProcessFinish(&current->data, get_clk());
+        struct PCB *pcb = (struct PCB *)current->data;
+        if (pcb->pid == pid) {
+            recrodProcessFinish(pcb, get_clk());
             break;
         }
         current = current->next;

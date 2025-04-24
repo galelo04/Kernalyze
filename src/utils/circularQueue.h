@@ -15,4 +15,4 @@ void* peek(struct Queue* queue);
 void shiftQueue(struct Queue* queue, int n);
 void freeQueue(struct Queue* queue);
 
-#endif CIRCULARQUEUE_H
+#endif  // CIRCULARQUEUE_H

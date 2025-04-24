@@ -44,13 +44,12 @@ int main(int argc, char* argv[]) {
             struct PCB* pcb = newPCB(0, current_clk, 2, 1);
             if (pcb != NULL) {
                 sendPCBtoScheduler(pcb);
-                printf("Process %d is sent to the scheduler\n", pcb->id);
+                printf("[pg] Process %d is sent to the scheduler\n", pcb->id);
                 free(pcb);
-            } else {
-                printf("No new process to send to the scheduler\n");
             }
         } else {
             sendPCBtoScheduler(NULL);
+            printf("[pg] No new process to send to the scheduler\n");
         }
     }
 

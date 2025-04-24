@@ -1,7 +1,7 @@
 #ifndef SCHEDULER_H
 #define SCHEDULER_H
 #include "clk.h"
-#include "utils.h"
+#include "defs.h"
 
 // handle process generator signal
 int fetchProcessFromQueue();
