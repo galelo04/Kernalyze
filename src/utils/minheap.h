@@ -1,5 +1,5 @@
-#ifndef MINHEAP_C
-#define MINHEAP_C
+#ifndef MINHEAP_H
+#define MINHEAP_H
 #include "vector.h"
 
 typedef struct {
@@ -62,7 +62,7 @@ void insertHelper(heap* h, int index);
 void heapify(heap* h, int index);
 
 // Extract the minimum element from the heap
-heap_node* extractMin(heap* h);
+void* extractMin(heap* h);
 
 // Insert a new element into the heap
 void insert(heap* h, void* data, int priority);

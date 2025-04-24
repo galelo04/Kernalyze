@@ -105,7 +105,7 @@ void heapify(heap* h, int index) {
 }
 
 // Extract the minimum element from the heap
-heap_node* extractMin(heap* h) {
+void* extractMin(heap* h) {
     // Checking if the heap is empty
     if (h->size == 0) {
         printf("\nHeap is empty.\n");
@@ -132,7 +132,11 @@ heap_node* extractMin(heap* h) {
     // Restore heap property
     heapify(h, 0);
 
-    return min_node;
+    // Free the minimum node & return its data
+    void* data = min_node->data;
+    free(min_node);
+
+    return data;
 }
 
 // Insert a new element into the heap
