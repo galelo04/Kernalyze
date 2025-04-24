@@ -12,7 +12,7 @@ typedef struct {
     int size;        // Number of elements in the heap
 } heap;
 
-/*example to use correctly
+/* example to use correctly
 
     // Create a new heap
     heap* h = createHeap();
@@ -20,37 +20,32 @@ typedef struct {
         return 1;
     }
 
-    PCB a , b;
+    PCB a, b;
 
     // Insert some elements
     insert(h, &a, 10);
     insert(h, &b, 5);
 
-    a.pid=1;
-    b.pid=2;
+    a.pid = 1;
+    b.pid = 2;
 
     // Print the heap
     printHeap(h);
 
-    // // Extract the minimum element
-    int data;
+    // Extract the minimum element
+    void* data;
     int priority;
-    int r = extractMin(h, &data, &priority);
-    if (r == 1) {
-        printf("Extracted min: priority = %d, data = %d\n", priority, ((PCB*)data)->pid);
+    int ok = heap_extract_min(h, &data, &priority);
+    if (ok) {
+        PCB* p = (PCB*)data;
+        printf("Extracted min: pid = %d, priority = %d\n", p->pid, priority);
     } else {
         printf("Heap is empty.\n");
     }
-   min = extractMin(h);
-   if (min != NULL) {
-       printf("Extracted min: priority = %d, data = %d\n",
-        min->priority, ((PCB*)min->data)->pid);
 
-    }
     // Clean up
     destroyHeap(h);
-
-    */
+*/
 
 // Function to get the priority of a heap node
 int get_node_priority(void* node_ptr);
@@ -65,7 +60,7 @@ void heapify(heap* h, int index);
 heap* heap_create(void);
 
 // Extract the minimum element from the heap
-int heap_extract_min(heap* h, void* data, int* priority);
+int heap_extract_min(heap* h, void** data, int* priority);
 
 // Insert a new element into the heap
 void heap_insert(heap* h, void* data, int priority);

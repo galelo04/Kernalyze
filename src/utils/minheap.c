@@ -1,4 +1,7 @@
 #include "minheap.h"
+
+#include <stdio.h>
+
 // Function to get the priority of a heap node
 int get_node_priority(void* node_ptr) {
     if (node_ptr == NULL) {
@@ -105,7 +108,7 @@ void heapify(heap* h, int index) {
 }
 
 // Extract the minimum element from the heap
-int heap_extract_min(heap* h, void* data, int* priority) {
+int heap_extract_min(heap* h, void** data, int* priority) {
     // Checking if the heap is empty
     if (h->size == 0) {
         printf("\nHeap is empty.\n");
@@ -114,18 +117,8 @@ int heap_extract_min(heap* h, void* data, int* priority) {
 
     // Get the minimum node (root of the heap)
     heap_node* min_node = (heap_node*)vector_get(h->vector, 0);
-
-    // If there's only one element
-    if (h->size == 1) {
-        h->size = 0;
-        h->vector->size = 0;
-
-        void* data = min_node->data;
-        int priority = min_node->priority;
-        free(min_node);
-
-        return 1;
-    }
+    *priority = min_node->priority;
+    *data = min_node->data;
 
     // Replace the root with the last element
     heap_node* last_node = (heap_node*)vector_get(h->vector, h->size - 1);
@@ -136,11 +129,9 @@ int heap_extract_min(heap* h, void* data, int* priority) {
     h->vector->size = h->size;  // Keep vector size synchronized
 
     // Restore heap property
-    heapify(h, 0);
+    if (h->size > 0) heapify(h, 0);
 
-    // Return the minimum node
-    void* data = min_node->data;
-    int priority = min_node->priority;
+    // Free the minimum node
     free(min_node);
 
     return 1;
@@ -170,7 +161,7 @@ void heap_insert(heap* h, void* data, int priority) {
 }
 
 // Print the heap's priorities (for debugging)
-void heap_print(heap* h) {
+void heap_print(const heap* h) {
     printf("Heap contents (priorities): ");
     for (int i = 0; i < h->size; i++) {
         heap_node* node = (heap_node*)vector_get(h->vector, i);
