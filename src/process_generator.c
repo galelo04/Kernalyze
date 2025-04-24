@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <sys/types.h>  // for pid_t
 #include <unistd.h>     // for fork, execl
+#include "utils/console_logger.h"
 
 #include "clk.h"
 
@@ -14,11 +15,15 @@ int main(int argc, char* argv[]) {
 
     pid_t clk_pid = fork();
     if (clk_pid == 0) {
+        init_clk();
+        sync_clk();
+        run_clk();
+    } else {
         signal(SIGINT, clear_resources);
         sync_clk();
         while (1) {
             int x = get_clk();
-            printf("current time is %d\n", x);
+            printInfo("process_generator", "Current time: %d", x);
             sleep(1);
             if (x > 4) {
                 break;
@@ -28,13 +33,11 @@ int main(int argc, char* argv[]) {
         // - A process should spawn at its arrival time
         // - Spawn the scheduler for handling context switching
         destroy_clk(1);
-    } else {
-        init_clk();
-        sync_clk();
-        run_clk();
+        return 0;
     }
 }
 
 void clear_resources(__attribute__((unused)) int signum) {
     // TODO Clears all resources in case of interruption
+    exit(0);
 }
