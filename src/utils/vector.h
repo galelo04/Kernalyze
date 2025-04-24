@@ -1,7 +1,6 @@
 #ifndef VECTOR_H
 #define VECTOR_H
 
-#include <stdio.h>
 #include <stdlib.h>
 
 typedef struct {
@@ -15,6 +14,9 @@ Vector* vector_create(int initial_capacity);
 
 // Function to push an element to the vector, resizing if necessary
 void vector_push(Vector* vec, void* element);
+
+// Function to pop an element from the vector
+void* vector_pop(Vector* vec);
 
 // Function to get an element at a specific index (void pointer for generality)
 void* vector_get(Vector* vec, int index);

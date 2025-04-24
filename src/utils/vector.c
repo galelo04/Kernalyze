@@ -32,6 +32,17 @@ void vector_push(Vector* vec, void* element) {
     vec->size++;
 }
 
+// Function to pop an element from the vector
+void* vector_pop(Vector* vec) {
+    if (vec->size > 0) {
+        void* element = vec->data[vec->size - 1];
+        vec->size--;
+        return element;
+    }
+
+    return NULL;
+}
+
 // Function to get an element at a specific index (void pointer for generality)
 void* vector_get(Vector* vec, int index) {
     if (index >= 0 && index < vec->size) {
