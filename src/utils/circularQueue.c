@@ -28,7 +28,7 @@ void enqueue(struct Queue* queue, void* data) {
 
 void* dequeue(struct Queue* queue) {
     if (queue == NULL || queue->rear == NULL) {
-        return;
+        return NULL;
     }
 
     struct Node* front = queue->rear->next;  // Get front node
@@ -50,7 +50,7 @@ void* dequeue(struct Queue* queue) {
 
 void* peek(struct Queue* queue) {
     if (queue == NULL || queue->rear == NULL) {
-        return;
+        return NULL;
     }
     return queue->rear->next->data;  // Return front node data
 }
