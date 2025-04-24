@@ -47,6 +47,7 @@ void init_clk() {
 
 void run_clk() {
     while (1) {
+        printf("-----------------------------------------------\nClock: %d\n", *shmaddr);
         sleep(1);
         (*shmaddr)++;
     }
