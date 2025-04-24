@@ -23,6 +23,7 @@ void stopProcess(struct PCB* pcb);
 void handleProcessExit(pid_t pid);
 void calculatePerformance();
 
-void schedule();
+struct PCB* schedule();
+void pushToReadyQueue(struct PCB* pcb);
 
 #endif

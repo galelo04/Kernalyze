@@ -2,18 +2,18 @@
 
 #include <stdio.h>
 
-// Function to get the priority of a heap node
+// Function to get the priority of a Heap node
 int get_node_priority(void* node_ptr) {
     if (node_ptr == NULL) {
         return 0;  // Default priority for NULL nodes
     }
-    return ((heap_node*)node_ptr)->priority;
+    return ((struct heap_node*)node_ptr)->priority;
 }
 
 // Define a createHeap function
-heap* heap_create() {
-    // Allocating memory to heap h
-    heap* h = (heap*)malloc(sizeof(heap));
+struct Heap* heap_create() {
+    // Allocating memory to Heap h
+    struct Heap* h = (struct Heap*)malloc(sizeof(struct Heap));
 
     // Checking if memory is allocated to h or not
     if (h == NULL) {
@@ -38,7 +38,7 @@ heap* heap_create() {
 }
 
 // Defining insertHelper function (bubble up)
-void insertHelper(heap* h, int index) {
+void insertHelper(struct Heap* h, int index) {
     if (index <= 0) {
         return;  // Base case: reached the root
     }
@@ -47,8 +47,8 @@ void insertHelper(heap* h, int index) {
     int parent = (index - 1) / 2;
 
     // Get node pointers from the vector
-    heap_node* current_node = (heap_node*)vector_get(h->vector, index);
-    heap_node* parent_node = (heap_node*)vector_get(h->vector, parent);
+    struct heap_node* current_node = (struct heap_node*)vector_get(h->vector, index);
+    struct heap_node* parent_node = (struct heap_node*)vector_get(h->vector, parent);
 
     if (parent_node == NULL || current_node == NULL) {
         return;  // Safety check
@@ -66,15 +66,15 @@ void insertHelper(heap* h, int index) {
 }
 
 // Heapify function (bubble down)
-void heapify(heap* h, int index) {
+void heapify(struct Heap* h, int index) {
     int left = index * 2 + 1;
     int right = index * 2 + 2;
     int smallest = index;
 
     // Check if left or right children exist and are smaller than current node
     if (left < h->size) {
-        heap_node* left_node = (heap_node*)vector_get(h->vector, left);
-        heap_node* current_node = (heap_node*)vector_get(h->vector, smallest);
+        struct heap_node* left_node = (struct heap_node*)vector_get(h->vector, left);
+        struct heap_node* current_node = (struct heap_node*)vector_get(h->vector, smallest);
 
         if (left_node != NULL && current_node != NULL &&
             left_node->priority < current_node->priority) {
@@ -83,8 +83,8 @@ void heapify(heap* h, int index) {
     }
 
     if (right < h->size) {
-        heap_node* right_node = (heap_node*)vector_get(h->vector, right);
-        heap_node* smallest_node = (heap_node*)vector_get(h->vector, smallest);
+        struct heap_node* right_node = (struct heap_node*)vector_get(h->vector, right);
+        struct heap_node* smallest_node = (struct heap_node*)vector_get(h->vector, smallest);
 
         if (right_node != NULL && smallest_node != NULL &&
             right_node->priority < smallest_node->priority) {
@@ -95,8 +95,8 @@ void heapify(heap* h, int index) {
     // If smallest is not the current index, swap and continue heapifying
     if (smallest != index) {
         // Get node pointers
-        heap_node* smallest_node = (heap_node*)vector_get(h->vector, smallest);
-        heap_node* current_node = (heap_node*)vector_get(h->vector, index);
+        struct heap_node* smallest_node = (struct heap_node*)vector_get(h->vector, smallest);
+        struct heap_node* current_node = (struct heap_node*)vector_get(h->vector, index);
 
         // Swap the nodes
         vector_set(h->vector, smallest_node, index);
@@ -107,28 +107,35 @@ void heapify(heap* h, int index) {
     }
 }
 
-// Extract the minimum element from the heap
-int heap_extract_min(heap* h, void** data, int* priority) {
-    // Checking if the heap is empty
+// Extract the minimum element from the Heap
+int heap_extract_min(struct Heap* h, void** data, int* priority) {
+    // Checking if the Heap is empty
     if (h->size == 0) {
         printf("\nHeap is empty.\n");
         return 0;
     }
 
-    // Get the minimum node (root of the heap)
-    heap_node* min_node = (heap_node*)vector_get(h->vector, 0);
-    *priority = min_node->priority;
+    if (data == NULL) {
+        printf("Data pointer is NULL.\n");
+        return 0;
+    }
+
+    // Get the minimum node (root of the Heap)
+    struct heap_node* min_node = (struct heap_node*)vector_get(h->vector, 0);
+    if (priority != NULL) {
+        *priority = min_node->priority;
+    }
     *data = min_node->data;
 
     // Replace the root with the last element
-    heap_node* last_node = (heap_node*)vector_get(h->vector, h->size - 1);
+    struct heap_node* last_node = (struct heap_node*)vector_get(h->vector, h->size - 1);
     vector_set(h->vector, last_node, 0);
 
     // Decrement the size
     h->size--;
     h->vector->size = h->size;  // Keep vector size synchronized
 
-    // Restore heap property
+    // Restore Heap property
     if (h->size > 0) heapify(h, 0);
 
     // Free the minimum node
@@ -137,10 +144,10 @@ int heap_extract_min(heap* h, void** data, int* priority) {
     return 1;
 }
 
-// Insert a new element into the heap
-void heap_insert(heap* h, void* data, int priority) {
-    // Create a new heap node
-    heap_node* new_node = (heap_node*)malloc(sizeof(heap_node));
+// Insert a new element into the Heap
+void heap_insert(struct Heap* h, void* data, int priority) {
+    // Create a new Heap node
+    struct heap_node* new_node = (struct heap_node*)malloc(sizeof(struct heap_node));
     if (new_node == NULL) {
         printf("Memory allocation error\n");
         return;
@@ -153,18 +160,18 @@ void heap_insert(heap* h, void* data, int priority) {
     // Add the new node to the vector
     vector_push(h->vector, new_node);
 
-    // Update heap size
+    // Update Heap size
     h->size = h->vector->size;
 
-    // Maintain heap property by bubbling up the new node
+    // Maintain Heap property by bubbling up the new node
     insertHelper(h, h->size - 1);
 }
 
-// Print the heap's priorities (for debugging)
-void heap_print(const heap* h) {
+// Print the Heap's priorities (for debugging)
+void heap_print(const struct Heap* h) {
     printf("Heap contents (priorities): ");
     for (int i = 0; i < h->size; i++) {
-        heap_node* node = (heap_node*)vector_get(h->vector, i);
+        struct heap_node* node = (struct heap_node*)vector_get(h->vector, i);
         if (node != NULL) {
             printf("%d ", node->priority);
         } else {
@@ -174,15 +181,15 @@ void heap_print(const heap* h) {
     printf("\n");
 }
 
-// Function to free the heap and all its nodes
-void heap_destroy(heap* h) {
+// Function to free the Heap and all its nodes
+void heap_destroy(struct Heap* h) {
     if (h == NULL) {
         return;
     }
 
-    // Free all heap nodes
+    // Free all Heap nodes
     for (int i = 0; i < h->vector->size; i++) {
-        heap_node* node = (heap_node*)vector_get(h->vector, i);
+        struct heap_node* node = (struct heap_node*)vector_get(h->vector, i);
         if (node != NULL) {
             free(node);
         }
@@ -191,6 +198,6 @@ void heap_destroy(heap* h) {
     // Free the vector
     vector_free(h->vector);
 
-    // Free the heap structure
+    // Free the Heap structure
     free(h);
 }

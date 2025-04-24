@@ -2,20 +2,20 @@
 #define MINHEAP_H
 #include "vector.h"
 
-typedef struct {
+struct heap_node {
     void* data;
     int priority;
-} heap_node;
+};
 
-typedef struct {
+struct Heap {
     Vector* vector;  // Vector to store heap_node pointers
-    int size;        // Number of elements in the heap
-} heap;
+    int size;        // Number of elements in the Heap
+};
 
 /* example to use correctly
 
-    // Create a new heap
-    heap* h = createHeap();
+    // Create a new Heap
+    Heap* h = createHeap();
     if (h == NULL) {
         return 1;
     }
@@ -29,7 +29,7 @@ typedef struct {
     a.pid = 1;
     b.pid = 2;
 
-    // Print the heap
+    // Print the Heap
     printHeap(h);
 
     // Extract the minimum element
@@ -47,28 +47,28 @@ typedef struct {
     destroyHeap(h);
 */
 
-// Function to get the priority of a heap node
+// Function to get the priority of a Heap node
 int get_node_priority(void* node_ptr);
 
 // Defining insertHelper function (bubble up)
-void insertHelper(heap* h, int index);
+void insertHelper(struct Heap* h, int index);
 
 // Heapify function (bubble down)
-void heapify(heap* h, int index);
+void heapify(struct Heap* h, int index);
 
 // Define a createHeap function
-heap* heap_create(void);
+struct Heap* heap_create(void);
 
-// Extract the minimum element from the heap
-int heap_extract_min(heap* h, void** data, int* priority);
+// Extract the minimum element from the Heap
+int heap_extract_min(struct Heap* h, void** data, int* priority);
 
-// Insert a new element into the heap
-void heap_insert(heap* h, void* data, int priority);
+// Insert a new element into the Heap
+void heap_insert(struct Heap* h, void* data, int priority);
 
-// Print the heap's priorities (for debugging)
-void heap_print(const heap* h);
+// Print the Heap's priorities (for debugging)
+void heap_print(const struct Heap* h);
 
-// Function to free the heap and all its nodes
-void heap_destroy(heap* h);
+// Function to free the Heap and all its nodes
+void heap_destroy(struct Heap* h);
 
-#endif
+#endif  // MINHEAP_H

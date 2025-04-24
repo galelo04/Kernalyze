@@ -4,6 +4,7 @@
 #include "utils/list.h"
 #include "utils/circularQueue.h"
 #include "utils/console_logger.h"
+#include "utils/minheap.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -48,7 +49,7 @@ void init_scheduler(int type, int quantum) {
     struct sigaction sa;
     sa.sa_handler = processExitSignalHandler;
     sigemptyset(&sa.sa_mask);
-    sa.sa_flags = SA_NOCLDSTOP;  // 💡 this is key!
+    sa.sa_flags = SA_NOCLDSTOP;
 
     if (sigaction(SIGCHLD, &sa, NULL) == -1) {
         perror("sigaction");
@@ -69,9 +70,11 @@ void init_scheduler(int type, int quantum) {
         perror("[Sheduler] msgget");
         exit(EXIT_FAILURE);
     }
-    if (type == 0) {
+    if (schedulerType == 0) {
         readyQueue = (void *)createQueue();
         schedulerQuantum = quantum;
+    } else if (schedulerType == 1) {
+        readyQueue = (void *)heap_create();
     }
 }
 
@@ -97,15 +100,30 @@ void run_scheduler() {
                 (*currentProcess->remainingTime)--;
                 remainingQuantum--;
                 if (remainingQuantum <= 0) {
-                    stopProcess(currentProcess);
-                    enqueue((struct Queue *)readyQueue, (void *)currentProcess);
+                    pushToReadyQueue(currentProcess);
                     remainingQuantum = 0;
-                    currentProcess = NULL;
+
+                    struct PCB *nextProcess = schedule();
+                    if (nextProcess != NULL && nextProcess != currentProcess) {
+                        stopProcess(currentProcess);
+                        currentProcess = nextProcess;
+                        if (currentProcess->state == INITIAL) {
+                            startProcess(currentProcess);
+                        } else {
+                            resumeProcess(currentProcess);
+                        }
+                        remainingQuantum = schedulerQuantum;
+                    }
                 }
             }
 
             if (currentProcess == NULL) {
-                schedule();
+                struct PCB *nextProcess = schedule();
+                if (nextProcess != NULL) {
+                    currentProcess = nextProcess;
+                    startProcess(currentProcess);
+                    remainingQuantum = schedulerQuantum;
+                }
             }
 
             oldClk = currentClk;
@@ -113,30 +131,28 @@ void run_scheduler() {
     }
 }
 
-void schedule() {
+struct PCB *schedule() {
+    struct PCB *nextProcess = NULL;
     if (schedulerType == 0) {
         // Round robin
         struct Queue *RRreadyQueue = (struct Queue *)readyQueue;
         if (isEmpty(RRreadyQueue)) {
-            idleTime++;
-            return;
+            return NULL;
         } else {
             while (!isEmpty(RRreadyQueue)) {
-                currentProcess = (struct PCB *)dequeue(RRreadyQueue);
-                if (currentProcess->state == INITIAL) {
-                    startProcess(currentProcess);
-                    remainingQuantum = schedulerQuantum;
-                    return;
-                } else if (currentProcess->state == READY) {
-                    resumeProcess(currentProcess);
-                    remainingQuantum = schedulerQuantum;
-                    return;
+                nextProcess = (struct PCB *)dequeue(RRreadyQueue);
+                if (nextProcess->state == INITIAL || nextProcess->state == READY) {
+                    return nextProcess;
                 } else if (currentProcess->state == FINISHED) {
                     continue;
                 }
             }
+            return NULL;
         }
+    } else if (schedulerType == 1) {
+        // SRTN
     }
+    return NULL;
 }
 
 int fetchProcessFromQueue() {
@@ -197,15 +213,7 @@ int fetchProcessFromQueue() {
     insertAtFront(pcbTable, (void *)pcb);
     printInfo("Scheduler", "Process %d arrived at time %d", pcb->id, pcb->arriveTime);
 
-    if (schedulerType == 0) {
-        // Round Robin
-        struct Queue *RRreadyQueue = (struct Queue *)readyQueue;
-        enqueue(RRreadyQueue, (void *)pcb);
-    } else if (schedulerType == 1) {
-        // SJF
-    } else if (schedulerType == 2) {
-        // Priority
-    }
+    pushToReadyQueue(pcb);
 
     return 0;
 }
@@ -322,5 +330,21 @@ void processExitSignalHandler(__attribute__((unused)) int signum) {
     pid_t pid;
     while ((pid = waitpid(-1, NULL, WNOHANG)) > 0) {
         write(signalPipe[1], &pid, sizeof(pid_t));
+    }
+}
+
+void pushToReadyQueue(struct PCB *pcb) {
+    if (schedulerType == 0) {
+        // Round Robin
+        struct Queue *RRreadyQueue = (struct Queue *)readyQueue;
+        enqueue(RRreadyQueue, (void *)pcb);
+    } else if (schedulerType == 1) {
+        // SJF
+        struct Heap *SJFreadyQueue = (struct Heap *)readyQueue;
+        heap_insert(SJFreadyQueue, (void *)pcb, *pcb->remainingTime);
+    } else if (schedulerType == 2) {
+        // Priority
+        struct Heap *HPFreadyQueue = (struct Heap *)readyQueue;
+        heap_insert(HPFreadyQueue, (void *)pcb, pcb->priority);
     }
 }

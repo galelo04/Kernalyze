@@ -25,42 +25,43 @@ pid_t sheduler_pid;
 
 int pgMsgqid = -1;
 
+int arrivalTimes[] = {1, 3};
+int runningTimes[] = {6, 3};
+
 int main(int argc, char* argv[]) {
     for (int i = 0; i < argc; i++) {
         printf("arg %d: %s\n", i, argv[i]);
     }
 
     initProcessGenerator();
-    int oldClk = 0;
     clk_pid = createClk();
-    sheduler_pid = createSheduler(0, 2);
+    sheduler_pid = createSheduler(1, 1);
     signal(SIGINT, clear_resources);
     signal(SIGCHLD, checkChildProcess);
     sync_clk();
+
+    int oldClk = get_clk();
     while (1) {
         int currentClk = get_clk();
         if (currentClk == oldClk) continue;
         oldClk = currentClk;
 
-        if (currentClk > 15) {
+        if (currentClk > 25) {
             break;
         }
-
-        if (currentClk == 1) {
-            struct ProcessData* pdata = newProcessData(1, currentClk, 6, 1);
-            if (pdata != NULL) {
-                sendProcesstoScheduler(pdata);
-                free(pdata);
+        int sendFlag = 0;
+        for (int i = 0; i < 2; ++i) {
+            if (currentClk == arrivalTimes[i]) {
+                struct ProcessData* pdata = newProcessData(i + 1, currentClk, runningTimes[i], 1);
+                if (pdata != NULL) {
+                    sendProcesstoScheduler(pdata);
+                    free(pdata);
+                }
+                sendFlag = 1;
+                break;
             }
-        } else if (currentClk == 3) {
-            struct ProcessData* pdata = newProcessData(2, currentClk, 3, 1);
-            if (pdata != NULL) {
-                sendProcesstoScheduler(pdata);
-                free(pdata);
-            }
-        } else {
-            sendProcesstoScheduler(NULL);
         }
+        if (sendFlag == 0) sendProcesstoScheduler(NULL);
     }
 
     destroy_clk(1);
