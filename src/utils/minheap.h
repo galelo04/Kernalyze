@@ -14,6 +14,44 @@ typedef struct {
 } heap;
 
 
+/*example to use correctly
+
+    // Create a new heap
+    heap* h = createHeap();
+    if (h == NULL) {
+        return 1;
+    }
+
+    PCB a , b;
+
+    // Insert some elements
+    insert(h, &a, 10);
+    insert(h, &b, 5);
+
+    a.pid=1;
+    b.pid=2;
+    
+    // Print the heap
+    printHeap(h);
+    
+    // // Extract the minimum element
+    heap_node* min = extractMin(h);
+    if (min != NULL) {
+        printf("Extracted min: priority = %d, data = %d\n", 
+               min->priority, ((PCB*)min->data)->pid);
+        }
+   min = extractMin(h);
+   if (min != NULL) {
+       printf("Extracted min: priority = %d, data = %d\n", 
+        min->priority, ((PCB*)min->data)->pid);
+        
+    }
+    // Clean up
+    destroyHeap(h);
+        
+    */
+
+
 
 // Function to get the priority of a heap node
 int get_node_priority(void* node_ptr) ;
@@ -38,6 +76,10 @@ void printHeap(heap* h) ;
 
 // Function to free the heap and all its nodes
 void destroyHeap(heap* h) ;
+
+
+
+
 
 
 #endif
