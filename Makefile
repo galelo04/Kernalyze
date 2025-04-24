@@ -9,8 +9,8 @@ TARGET_PROCESS_GENERATOR = os-sim
 SRC_FILES := $(wildcard $(SRC)/**/*.c) $(wildcard $(SRC)/*.c)
 
 # Define the object files for process and process_generator
-OBJ_FILES_PROCESS := $(patsubst $(SRC)/%.c, $(OBJ)/%.c.o, $(filter $(SRC)/process.c $(SRC)/clk.c $(SRC)/utils/%.c $(SRC)/semaphore/semaphore.c, $(SRC_FILES)))
-OBJ_FILES_PROCESS_GENERATOR := $(patsubst $(SRC)/%.c, $(OBJ)/%.c.o, $(filter $(SRC)/process_generator.c $(SRC)/utils/%.c $(SRC)/scheduler.c $(SRC)/clk.c $(SRC)/semaphore/semaphore.c, $(SRC_FILES)))
+OBJ_FILES_PROCESS := $(patsubst $(SRC)/%.c, $(OBJ)/%.c.o, $(filter $(SRC)/process.c $(SRC)/clk.c $(SRC)/utils/%.c , $(SRC_FILES)))
+OBJ_FILES_PROCESS_GENERATOR := $(patsubst $(SRC)/%.c, $(OBJ)/%.c.o, $(filter $(SRC)/process_generator.c $(SRC)/utils/%.c $(SRC)/scheduler.c $(SRC)/clk.c , $(SRC_FILES)))
 
 # Rule to compile each .c file to .o
 $(OBJ)/%.c.o: $(SRC)/%.c
