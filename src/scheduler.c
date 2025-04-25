@@ -86,7 +86,7 @@ void run_scheduler() {
     while (1) {
         currentClk = get_clk();
         if (currentClk != oldClk) {
-            while (fetchProcessFromQueue());
+            fetchProcessFromQueue();
             pid_t pid;
             ssize_t bytesRead;
             bytesRead = read(signalPipe[0], &pid, sizeof(pid_t));
@@ -121,7 +121,11 @@ void run_scheduler() {
                 struct PCB *nextProcess = schedule();
                 if (nextProcess != NULL) {
                     currentProcess = nextProcess;
-                    startProcess(currentProcess);
+                    if (currentProcess->state == INITIAL) {
+                        startProcess(currentProcess);
+                    } else {
+                        resumeProcess(currentProcess);
+                    }
                     remainingQuantum = schedulerQuantum;
                 }
             }
@@ -155,67 +159,62 @@ struct PCB *schedule() {
     return NULL;
 }
 
-int fetchProcessFromQueue() {
+void fetchProcessFromQueue() {
     struct PCBMessage msg;
-    if (msgrcv(schedulerMsqid, &msg, sizeof(struct PCB), MSG_TYPE_PCB, IPC_NOWAIT) == -1) {
-        return 1;
+    while (msgrcv(schedulerMsqid, &msg, sizeof(struct PCB), MSG_TYPE_PCB, 0) != -1) {
+        // No processes to fetch
+        if (msg.pdata.id == -1) {
+            return;
+        }
+        // Create a new PCB and add it to the PCB table
+        struct PCB *pcb = (struct PCB *)malloc(sizeof(struct PCB));
+        if (pcb == NULL) {
+            perror("malloc");
+            return;
+        }
+
+        // Data from generator
+        pcb->id = msg.pdata.id;
+        pcb->arriveTime = msg.pdata.arriveTime;
+        pcb->runningTime = msg.pdata.runningTime;
+        pcb->priority = msg.pdata.priority;
+
+        // default values
+        pcb->state = INITIAL;
+        pcb->startTime = 0;
+        pcb->finishTime = 0;
+        pcb->waitTime = 0;
+        pcb->turnaroundTime = 0;
+        pcb->weightedTurnaroundTime = 0;
+        pcb->pid = -1;
+
+        // Create shared memory for remaining time
+        pcb->shmKey = ftok(SHM_KEYFILE, pcb->id);
+        if (pcb->shmKey == -1) {
+            perror("[Scheduler] ftok");
+            return;
+        }
+
+        pcb->shmID = shmget(pcb->shmKey, sizeof(int), IPC_CREAT | 0666);
+        if (pcb->shmID == -1) {
+            perror("[Scheduler] shmget");
+            return;
+        }
+
+        pcb->shmAddr = shmat(pcb->shmID, NULL, 0);
+        if (pcb->shmAddr == (void *)-1) {
+            perror("[Scheduler] shmat");
+            return;
+        }
+
+        pcb->remainingTime = (int *)pcb->shmAddr;
+        *pcb->remainingTime = pcb->runningTime;
+
+        insertAtFront(pcbTable, (void *)pcb);
+        printInfo("Scheduler", "Process %d arrived at time %d", pcb->id, pcb->arriveTime);
+
+        pushToReadyQueue(pcb);
     }
-
-    // No processes to fetch
-    if (msg.pdata.id == -1) {
-        return 0;
-    }
-
-    // Create a new PCB and add it to the PCB table
-    struct PCB *pcb = (struct PCB *)malloc(sizeof(struct PCB));
-    if (pcb == NULL) {
-        perror("malloc");
-        return 0;
-    }
-
-    // Data from generator
-    pcb->id = msg.pdata.id;
-    pcb->arriveTime = msg.pdata.arriveTime;
-    pcb->runningTime = msg.pdata.runningTime;
-    pcb->priority = msg.pdata.priority;
-
-    // default values
-    pcb->state = INITIAL;
-    pcb->startTime = 0;
-    pcb->finishTime = 0;
-    pcb->waitTime = 0;
-    pcb->turnaroundTime = 0;
-    pcb->weightedTurnaroundTime = 0;
-    pcb->pid = -1;
-
-    // Create shared memory for remaining time
-    pcb->shmKey = ftok(SHM_KEYFILE, pcb->id);
-    if (pcb->shmKey == -1) {
-        perror("[Scheduler] ftok");
-        return 0;
-    }
-
-    pcb->shmID = shmget(pcb->shmKey, sizeof(int), IPC_CREAT | 0666);
-    if (pcb->shmID == -1) {
-        perror("[Scheduler] shmget");
-        return 0;
-    }
-
-    pcb->shmAddr = shmat(pcb->shmID, NULL, 0);
-    if (pcb->shmAddr == (void *)-1) {
-        perror("[Scheduler] shmat");
-        return 0;
-    }
-
-    pcb->remainingTime = (int *)pcb->shmAddr;
-    *pcb->remainingTime = pcb->runningTime;
-
-    insertAtFront(pcbTable, (void *)pcb);
-    printInfo("Scheduler", "Process %d arrived at time %d", pcb->id, pcb->arriveTime);
-
-    pushToReadyQueue(pcb);
-
-    return 0;
 }
 
 void startProcess(struct PCB *pcb) {

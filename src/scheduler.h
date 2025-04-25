@@ -6,7 +6,7 @@
 #include "defs.h"
 
 // handle process generator signal
-int fetchProcessFromQueue();
+void fetchProcessFromQueue();
 
 // handle process exit signal
 void processExitSignalHandler(int signum);
