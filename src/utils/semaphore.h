@@ -1,7 +1,7 @@
 #ifndef SEMAPHORE_H_
 #define SEMAPHORE_H_
 
-int init_semaphore(void);
+int init_semaphore(int id);
 
 void up(int semid);
 

@@ -35,3 +35,15 @@ void printWarning(const char* module, const char* format, ...) {
     printf("\n");
     fflush(stdout);
 }
+
+void printSuccess(const char* module, const char* format, ...) {
+    printf("[" ANSI_COLOR_BOLD_GREEN "%s" ANSI_COLOR_RESET "] ", module);
+
+    va_list args;
+    va_start(args, format);
+    vprintf(format, args);
+    va_end(args);
+
+    printf("\n");
+    fflush(stdout);
+}

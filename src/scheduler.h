@@ -5,20 +5,25 @@
 #include "clk.h"
 #include "defs.h"
 
+// handle process generator signal
+void fetchProcessFromQueue();
+
+// handle process exit signal
+void processExitSignalHandler(int signum);
+
+void init_scheduler();
 void run_scheduler();
 
-void init_schuduler();
-
-struct PCB* checkForNewArrivals();
-
-pid_t startProcess(struct PCB* pcb);
-
+// proccess control
+void startProcess(struct PCB* pcb);
 void resumeProcess(struct PCB* pcb);
-
 void stopProcess(struct PCB* pcb);
 
-void recrodProcessFinish(struct PCB* pcb, int finishTime);
-
+// calculate performance
+void handleProcessExit(pid_t pid);
 void calculatePerformance();
+
+struct PCB* schedule();
+void pushToReadyQueue(struct PCB* pcb);
 
 #endif

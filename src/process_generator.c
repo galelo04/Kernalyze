@@ -3,41 +3,178 @@
 #include <stdlib.h>
 #include <sys/types.h>  // for pid_t
 #include <unistd.h>     // for fork, execl
-#include "utils/console_logger.h"
+#include <sys/msg.h>    // for msgget, msgsnd
+#include <sys/wait.h>
 
 #include "clk.h"
+#include "scheduler.h"
+#include "utils/console_logger.h"
 
 void clear_resources(int);
+void checkChildProcess(int);
+
+void sendProcesstoScheduler(struct ProcessData* pcb);
+struct ProcessData* newProcessData(int id, int arriveTime, int runningTime, int priority);
+
+void initProcessGenerator();
+
+pid_t createClk();
+pid_t createSheduler(int type, int quantum);
+pid_t clk_pid;
+pid_t sheduler_pid;
+
+int pgMsgqid = -1;
+
+int arrivalTimes[] = {1, 3};
+int runningTimes[] = {6, 3};
+
 int main(int argc, char* argv[]) {
     for (int i = 0; i < argc; i++) {
         printf("arg %d: %s\n", i, argv[i]);
     }
 
-    pid_t clk_pid = fork();
-    if (clk_pid == 0) {
-        init_clk();
-        sync_clk();
-        run_clk();
-    } else {
-        signal(SIGINT, clear_resources);
-        sync_clk();
-        while (1) {
-            int x = get_clk();
-            printInfo("process_generator", "Current time: %d", x);
-            sleep(1);
-            if (x > 4) {
+    initProcessGenerator();
+    clk_pid = createClk();
+    sheduler_pid = createSheduler(0, 1);
+    signal(SIGINT, clear_resources);
+    signal(SIGCHLD, checkChildProcess);
+    sync_clk();
+
+    int oldClk = get_clk();
+    while (1) {
+        int currentClk = get_clk();
+        if (currentClk == oldClk) continue;
+        oldClk = currentClk;
+
+        if (currentClk > 25) {
+            break;
+        }
+        int sendFlag = 0;
+        for (int i = 0; i < 2; ++i) {
+            if (currentClk == arrivalTimes[i]) {
+                struct ProcessData* pdata = newProcessData(i + 1, currentClk, runningTimes[i], 1);
+                if (pdata != NULL) {
+                    sendProcesstoScheduler(pdata);
+                    free(pdata);
+                }
+                sendFlag = 1;
                 break;
             }
         }
-        // TODO:
-        // - A process should spawn at its arrival time
-        // - Spawn the scheduler for handling context switching
-        destroy_clk(1);
-        return 0;
+        if (sendFlag == 0) sendProcesstoScheduler(NULL);
+    }
+
+    destroy_clk(1);
+}
+
+void initProcessGenerator() {
+    // Create message queue
+    key_t key = ftok(MSG_QUEUE_KEYFILE, 1);
+    if (key == -1) {
+        perror("ftok");
+        exit(1);
+    }
+
+    pgMsgqid = msgget(key, IPC_CREAT | 0666);
+    if (pgMsgqid == -1) {
+        perror("msgget");
+        exit(1);
     }
 }
 
 void clear_resources(__attribute__((unused)) int signum) {
     // TODO Clears all resources in case of interruption
+    if (msgctl(pgMsgqid, IPC_RMID, NULL) == -1) {
+        perror("msgctl");
+        exit(EXIT_FAILURE);
+    }
+    printf("Message queue removed\n");
     exit(0);
+}
+
+void sendProcesstoScheduler(struct ProcessData* pdata) {
+    struct PCBMessage msg;
+    msg.mtype = MSG_TYPE_PCB;
+    if (pdata == NULL) {
+        msg.pdata.id = -1;
+        msg.pdata.arriveTime = -1;
+        msg.pdata.runningTime = -1;
+        msg.pdata.priority = -1;
+    } else
+        msg.pdata = *pdata;
+
+    if (msgsnd(pgMsgqid, &msg, sizeof(struct ProcessData), 0) == -1) {
+        perror("msgsnd");
+        exit(1);
+    }
+}
+
+struct ProcessData* newProcessData(int id, int arriveTime, int runningTime, int priority) {
+    struct ProcessData* pdata = (struct ProcessData*)malloc(sizeof(struct ProcessData));
+    if (pdata == NULL) {
+        perror("Failed to allocate memory for ProcessData");
+        return NULL;
+    }
+    pdata->id = id;
+    pdata->arriveTime = arriveTime;
+    pdata->runningTime = runningTime;
+    pdata->priority = priority;
+    return pdata;
+}
+
+pid_t createClk() {
+    pid_t pid = fork();
+    if (pid == -1) {
+        perror("Failed to fork for clk");
+        exit(1);
+    }
+    if (pid == 0) {
+        init_clk();
+        sync_clk();
+        run_clk();
+        exit(0);
+    }
+    return pid;
+}
+/*
+@param type 0 for RR, 1 for SRTN, 2 for HPF
+@param quantum quantum time for RR
+*/
+pid_t createSheduler(int type, int quantum) {
+    pid_t pid = fork();
+    if (pid == -1) {
+        perror("Failed to fork for sheduler");
+        exit(1);
+    }
+    if (pid == 0) {
+        init_scheduler(type, quantum);
+        run_scheduler();
+        exit(0);
+    }
+    return pid;
+}
+
+void checkChildProcess(__attribute__((unused)) int signum) {
+    pid_t pid;
+    int status;
+
+    while ((pid = waitpid(-1, &status, WNOHANG)) > 0) {
+        if (pid == clk_pid) {
+            if (WIFEXITED(status)) {
+                int exit_code = WEXITSTATUS(status);
+                printInfo("PG", "Clock process terminated with exit code %d\n", exit_code);
+            } else if (WIFSIGNALED(status)) {
+                int signal_number = WTERMSIG(status);
+                printInfo("PG", "Clock process terminated by signal %d\n", signal_number);
+            }
+        } else if (pid == sheduler_pid) {
+            if (WIFEXITED(status)) {
+                int exit_code = WEXITSTATUS(status);
+                printInfo("PG", "Scheduler process terminated with exit code %d\n", exit_code);
+            } else if (WIFSIGNALED(status)) {
+                int signal_number = WTERMSIG(status);
+                printInfo("PG", "Scheduler process terminated by signal %d\n", signal_number);
+            }
+        }
+    }
 }

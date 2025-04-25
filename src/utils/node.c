@@ -1,3 +1,6 @@
+#include <stdlib.h>
+#include <stdio.h>
+#include <errno.h>
 #include "node.h"
 
 struct Node *createNode(void *data) {
