@@ -66,7 +66,7 @@ int main(int argc, char* argv[]) {
     int processCount = readProcessesFile(&processes);
 
     if (processCount <= 0) {
-        printf("No processes found in the file\n");
+        printError("PG", "No processes found in the file");
         raise(SIGINT);
     }
 
@@ -101,24 +101,24 @@ void parseCommandLineArgs(int argc, char* argv[]) {
                 } else if (strcmp(argv[i + 1], "hpf") == 0) {
                     argSchedulerType = 2;
                 } else {
-                    printf("Invalid scheduler type\n");
+                    printError("PG", "Invalid scheduler type");
                     raise(SIGINT);
                 }
                 i += 2;
             } else {
-                printf("Invalid scheduler type\n");
+                printError("PG", "Invalid scheduler type");
                 raise(SIGINT);
             }
         } else if (strcmp(argv[i], "-q") == 0) {  // Quantum for RR
             if (i + 1 < argc) {
                 argQuantum = atoi(argv[i + 1]);
                 if (argQuantum <= 0) {
-                    printf("Invalid quantum\n");
+                    printError("PG", "Invalid quantum");
                     raise(SIGINT);
                 }
                 i += 2;
             } else {
-                printf("Invalid quantum\n");
+                printError("PG", "Invalid quantum");
                 raise(SIGINT);
             }
         } else if (strcmp(argv[i], "-f") == 0) {  // Filename
@@ -126,24 +126,24 @@ void parseCommandLineArgs(int argc, char* argv[]) {
                 argFilename = argv[i + 1];
                 i += 2;
             } else {
-                printf("Invalid filename\n");
+                printError("PG", "Invalid filename");
                 raise(SIGINT);
             }
         }
     }
 
     if (argFilename == NULL) {
-        printf("Invalid filename\n");
+        printError("PG", "Invalid filename");
         raise(SIGINT);
     }
 
     if (argSchedulerType == -1) {
-        printf("Invalid scheduler type\n");
+        printError("PG", "Invalid scheduler type");
         raise(SIGINT);
     }
 
     if (argQuantum == -1 && argSchedulerType == 0) {
-        printf("Invalid quantum for RR\n");
+        printError("PG", "Invalid quantum");
         raise(SIGINT);
     }
 }
