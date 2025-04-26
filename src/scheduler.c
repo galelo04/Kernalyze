@@ -330,7 +330,7 @@ void handleProcessExit(struct PCB *pcb) {
 
     printWarning(
         "Scheduler",
-        "At time %d process %d finished arr %d total %d remain %d wait %d TA %d WTA %.2f\n",
+        "At time %d process %d finished arr %d total %d remain %d wait %d TA %d WTA %.2f",
         currentClk, pcb->id, pcb->arriveTime, pcb->runningTime, remainingTime, pcb->waitTime,
         pcb->turnaroundTime, pcb->weightedTurnaroundTime);
 }
