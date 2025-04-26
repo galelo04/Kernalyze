@@ -4,6 +4,7 @@
 #include <sys/types.h>
 
 #define MSG_TYPE_PCB 1
+#define MSG_TYPE_TERMINATION 2
 #define MSG_QUEUE_KEYFILE "keyfolder/queueKey.txt"
 #define SHM_KEYFILE "keyfolder/shmKey.txt"
 #define SEM_KEYFILE "keyfolder/semKey.txt"

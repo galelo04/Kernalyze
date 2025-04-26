@@ -26,8 +26,8 @@ int argSchedulerType;
 int argQuantum;
 char* argFilename;
 
-pid_t clkPID;
-pid_t schedulerPID;
+pid_t clkPID = -1;
+pid_t schedulerPID = -1;
 int pgMsgqid = -1;
 
 int main(int argc, char* argv[]) {
@@ -102,7 +102,7 @@ void parseCommandLineArgs(int argc, char* argv[]) {
         } else if (strcmp(argv[i], "-q") == 0) {  // Quantum for RR
             if (i + 1 < argc) {
                 argQuantum = atoi(argv[i + 1]);
-                if (argQuantum < 0) {
+                if (argQuantum <= 0) {
                     printf("Invalid quantum\n");
                     exit(1);
                 }
@@ -182,7 +182,7 @@ void clearResources(__attribute__((unused)) int signum) {
         exit(1);
     }
 
-    printf("Message queue removed\n");
+    printInfo("PG", "Process generator terminating");
     exit(0);
 }
 
@@ -229,21 +229,52 @@ void checkChildProcess(__attribute__((unused)) int signum) {
         if (pid == clkPID) {
             if (WIFEXITED(status)) {
                 int exit_code = WEXITSTATUS(status);
-                printInfo("PG", "Clock process terminated with exit code %d\n", exit_code);
+                printInfo("PG", "Clock process terminated with exit code %d", exit_code);
             } else if (WIFSIGNALED(status)) {
                 int signal_number = WTERMSIG(status);
-                printInfo("PG", "Clock process terminated by signal %d\n", signal_number);
+                printInfo("PG", "Clock process terminated by signal %d", signal_number);
             }
+
+            if (schedulerPID != -1) {
+                printInfo("PG", "Clock has stopped, stopping scheduler");
+                kill(schedulerPID, SIGINT);
+                waitpid(schedulerPID, NULL, 0);
+                printInfo("PG", "Scheduler has stopped");
+                schedulerPID = -1;
+            }
+
+            clearResources(SIGINT);
         } else if (pid == schedulerPID) {
             if (WIFEXITED(status)) {
                 int exit_code = WEXITSTATUS(status);
-                printInfo("PG", "Scheduler process terminated with exit code %d\n", exit_code);
+                printInfo("PG", "Scheduler process terminated with exit code %d", exit_code);
             } else if (WIFSIGNALED(status)) {
                 int signal_number = WTERMSIG(status);
-                printInfo("PG", "Scheduler process terminated by signal %d\n", signal_number);
+                printInfo("PG", "Scheduler process terminated by signal %d", signal_number);
             }
+
+            if (clkPID != -1) {
+                printInfo("PG", "Scheduler has stopped, stopping clock");
+                kill(clkPID, SIGINT);
+                waitpid(clkPID, NULL, 0);
+                printInfo("PG", "Clock has stopped");
+                clkPID = -1;
+            }
+
+            clearResources(SIGINT);
         } else {
-            printInfo("PG", "Unknown child process terminated with PID %d\n", pid);
+            // send a message to the scheduler that the process has terminated
+            struct PCBMessage msg;
+            msg.mtype = MSG_TYPE_TERMINATION;
+            msg.pdata.id = pid;
+            msg.pdata.pid = pid;
+
+            if (msgsnd(pgMsgqid, &msg, sizeof(struct ProcessData), 0) == -1) {
+                perror("[PG] msgsnd");
+                exit(1);
+            }
+
+            printInfo("PG", "Process %d terminated", pid);
         }
     }
 }
@@ -290,17 +321,15 @@ pid_t forkProcess(int id) {
     }
 
     if (pid == 0) {
-        char idStr[32], schedulerPIDStr[32];
+        char idStr[32];
 
-        // Convert id & schedulerPID to string
+        // Convert id to string
         snprintf(idStr, sizeof(idStr), "%d", id);
-        snprintf(schedulerPIDStr, sizeof(schedulerPIDStr), "%d", schedulerPID);
 
         char* args[3];
         args[0] = PROCESS_PATH;
         args[1] = idStr;
-        args[2] = schedulerPIDStr;
-        args[3] = NULL;
+        args[2] = NULL;
 
         // Stop the process until the scheduler starts it
         kill(getpid(), SIGSTOP);

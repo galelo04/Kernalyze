@@ -25,12 +25,12 @@ int shmid;
 /* Clear the resources before exit */
 void _cleanup(__attribute__((unused)) int signum) {
     shmctl(shmid, IPC_RMID, NULL);
-    printInfo("clk", "Clock terminating!");
+    printInfo("CLK", "Clock terminating!");
     exit(0);
 }
 
 void initClk() {
-    printInfo("clk", "Clock starting");
+    printInfo("CLK", "Clock starting");
     signal(SIGINT, _cleanup);
     int clk = -1;
     // Create shared memory for one integer variable 4 bytes
@@ -60,7 +60,7 @@ void syncClk() {
     int shmid = shmget(SHKEY, 4, 0444);
     while ((int)shmid == -1) {
         // Make sure that the clock exists
-        printWarning("clk", "Wait! The clock not initialized yet!");
+        printWarning("CLK", "Wait! The clock not initialized yet!");
         sleep(1);
         shmid = shmget(SHKEY, 4, 0444);
     }

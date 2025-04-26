@@ -19,7 +19,7 @@ void resumeProcess(struct PCB* pcb);
 void stopProcess(struct PCB* pcb);
 
 // calculate performance
-void handleProcessExit(pid_t pid);
+void handleProcessExit(struct PCB* pcb);
 void calculatePerformance(int totalTime, int idleTime);
 
 struct PCB* schedule();

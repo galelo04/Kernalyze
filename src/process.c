@@ -37,30 +37,26 @@ void detachRemainingTime(int* remainingTime) {
     }
 }
 
-int main(__attribute__((unused)) int argc, char* argv[]) {
-    printf("Scheduler PID: %d\n", atoi(argv[2]));
+int main(int, char* argv[]) {
+    int id = atoi(argv[1]);
+
+    printInfo("Process", "Process %d started with PID %d", id, getpid());
     syncClk();
 
-    int id = atoi(argv[1]);
-    // int runningTime = atoi(argv[2]);
-
     int* remainingTime = getRemainingTimeAddr(id);
-
-    char* processName = malloc(32);
-    snprintf(processName, 32, "Process %d", id);
-
     int oldClk = getClk();
-    // printInfo(processName, "Started with running time %d at %d", runningTime, oldClk);
-    while (*remainingTime > 1) {
-        if (getClk() != oldClk) {
-            oldClk = getClk();
+
+    // Busy-wait
+    while (1) {
+        int clk = getClk();
+        if (clk != oldClk) {
+            oldClk = clk;
+            if (*remainingTime <= 0) break;
         }
     }
 
-    // printInfo(processName, " Finished at time %d", getClk());
-
-    // Detach shared memory
     detachRemainingTime(remainingTime);
-    kill(atoi(argv[2]), SIGUSR1);  // Notify scheduler that process has finished
+    printSuccess("Process", "Process %d finished at time %d", id, oldClk);
+
     return 0;
 }
