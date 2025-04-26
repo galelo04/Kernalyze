@@ -31,7 +31,7 @@ int* getRemainingTimeAddr(int id) {
 }
 
 void detachRemainingTime(int* remainingTime) {
-    if (shmdt(remainingTime) == -1) {
+    if (shmdt((void*)remainingTime) == -1) {
         perror("shmdt");
         exit(EXIT_FAILURE);
     }
@@ -44,18 +44,14 @@ int main(int, char* argv[]) {
     syncClk();
 
     int* remainingTime = getRemainingTimeAddr(id);
-    int oldClk = getClk();
 
     // Busy-wait
     while (1) {
-        int clk = getClk();
-        if (clk != oldClk) {
-            oldClk = clk;
-            if (*remainingTime <= 0) break;
-        }
+        if (*remainingTime <= 0) break;
     }
 
-    detachRemainingTime(remainingTime);
+    int oldClk = getClk();
+    // detachRemainingTime(remainingTime);
     printSuccess("Process", "Process %d finished at time %d", id, oldClk);
 
     return 0;
