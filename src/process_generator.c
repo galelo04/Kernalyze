@@ -36,7 +36,7 @@ int pgSemid = -1;
 
 int main(int argc, char* argv[]) {
     // Read scheduler, quantum, filename
-    pgSemid = init_semaphore(2);
+    pgSemid = initSemaphore(2);
     signal(SIGUSR2, pgClkHandler);
     parseCommandLineArgs(argc, argv);
 
@@ -184,7 +184,7 @@ int readProcessesFile(struct ProcessData** processes) {
 
 void pgClearResources(__attribute__((unused)) int signum) {
     printInfo("PG", "Process generator terminating");
-    destroy_semaphore(pgSemid);
+    destroySemaphore(pgSemid);
     exit(0);
 }
 

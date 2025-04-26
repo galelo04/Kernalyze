@@ -50,7 +50,7 @@ void schedulerClkHandler(int) {
 }
 
 void initScheduler(int type, int quantum) {
-    schedulerSemid = init_semaphore(1);
+    schedulerSemid = initSemaphore(1);
     signal(SIGUSR2, schedulerClkHandler);
     signal(SIGINT, schedulerClearResources);
     // Set scheduler parameters
@@ -331,7 +331,7 @@ void pushToReadyQueue(struct PCB *pcb) {
 
 void schedulerClearResources(int) {
     printInfo("Scheduler", "Scheduler terminating");
-    destroy_semaphore(schedulerSemid);
+    destroySemaphore(schedulerSemid);
     if (msgctl(schedulerMsqid, IPC_RMID, NULL) == -1) {
         perror("[Scheduler] msgctl");
         exit(EXIT_FAILURE);

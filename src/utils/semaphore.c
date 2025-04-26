@@ -13,7 +13,7 @@ union semun {
     int val;
 };  // Union for semctl arguments
 
-int init_semaphore(int id) {
+int initSemaphore(int id) {
     key_t key = ftok(SEM_KEYFILE, id);  // Generate a unique key for the semaphore
     if (key == -1) {
         perror("ftok failed");
@@ -65,7 +65,7 @@ void set_semaphore(int semid, int value) {
     }
 }
 
-void destroy_semaphore(int semid) {
+void destroySemaphore(int semid) {
     if (semctl(semid, 0, IPC_RMID) == -1) {  // Remove the semaphore
         perror("semctl failed");
     }
