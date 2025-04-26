@@ -35,9 +35,17 @@ int pgCurrentClk = -1;
 int pgSemid = -1;
 
 int main(int argc, char* argv[]) {
-    // Read scheduler, quantum, filename
+    // Initialize semaphore for clock
     pgSemid = initSemaphore(2);
+
+    // Signal handlers so when the scheduler dies
+    signal(SIGINT, pgClearResources);
+    signal(SIGCHLD, checkChildProcess);
+
+    // Signal handler for clock
     signal(SIGUSR2, pgClkHandler);
+
+    // Read scheduler, quantum, filename
     parseCommandLineArgs(argc, argv);
 
     // Message queue for communication with scheduler
@@ -65,10 +73,6 @@ int main(int argc, char* argv[]) {
     // Clock & Scheduler creation
     schedulerPID = createScheduler();
     clkPID = createClk();
-
-    // Signal handlers so when the scheduler dies
-    signal(SIGINT, pgClearResources);
-    signal(SIGCHLD, checkChildProcess);
 
     syncClk();
 
