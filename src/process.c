@@ -1,13 +1,13 @@
-#include "clk.h"
-#include "defs.h"
-#include "utils/console_logger.h"
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/ipc.h>
 #include <sys/shm.h>
 #include <unistd.h>
 
-#include <signal.h>
+#include "clk.h"
+#include "defs.h"
+#include "utils/console_logger.h"
 
 int* getRemainingTimeAddr(int id) {
     key_t shmKey = ftok(SHM_KEYFILE, id);
@@ -38,6 +38,7 @@ void detachRemainingTime(int* remainingTime) {
 }
 
 int main(__attribute__((unused)) int argc, char* argv[]) {
+    printf("Scheduler PID: %d\n", atoi(argv[2]));
     sync_clk();
 
     int id = atoi(argv[1]);
@@ -60,6 +61,6 @@ int main(__attribute__((unused)) int argc, char* argv[]) {
 
     // Detach shared memory
     detachRemainingTime(remainingTime);
-    // kill(getppid(), SIGUSR1);  // Notify the parent process (scheduler)
+    kill(atoi(argv[2]), SIGUSR1);  // Notify scheduler that process has finished
     return 0;
 }

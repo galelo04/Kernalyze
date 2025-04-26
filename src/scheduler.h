@@ -11,17 +11,16 @@ void fetchProcessFromQueue();
 // handle process exit signal
 void processExitSignalHandler(int signum);
 
-void init_scheduler();
-void run_scheduler();
+void initScheduler(int type, int quantum);
+void runScheduler();
 
 // proccess control
-void startProcess(struct PCB* pcb);
 void resumeProcess(struct PCB* pcb);
 void stopProcess(struct PCB* pcb);
 
 // calculate performance
 void handleProcessExit(pid_t pid);
-void calculatePerformance();
+void calculatePerformance(int totalTime, int idleTime);
 
 struct PCB* schedule();
 void pushToReadyQueue(struct PCB* pcb);
