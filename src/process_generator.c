@@ -235,6 +235,15 @@ void checkChildProcess(__attribute__((unused)) int signum) {
                 printInfo("PG", "Clock process terminated by signal %d\n", signal_number);
             }
         } else if (pid == schedulerPID) {
+            if (WIFEXITED(status)) {
+                int exit_code = WEXITSTATUS(status);
+                printInfo("PG", "Scheduler process terminated with exit code %d\n", exit_code);
+            } else if (WIFSIGNALED(status)) {
+                int signal_number = WTERMSIG(status);
+                printInfo("PG", "Scheduler process terminated by signal %d\n", signal_number);
+            }
+        } else {
+            printInfo("PG", "Unknown child process terminated with PID %d\n", pid);
         }
     }
 }
@@ -283,11 +292,11 @@ pid_t forkProcess(int id) {
     if (pid == 0) {
         char idStr[32], schedulerPIDStr[32];
 
-        // Convert id & runningTime to strings
+        // Convert id & schedulerPID to string
         snprintf(idStr, sizeof(idStr), "%d", id);
         snprintf(schedulerPIDStr, sizeof(schedulerPIDStr), "%d", schedulerPID);
 
-        char* args[4];
+        char* args[3];
         args[0] = PROCESS_PATH;
         args[1] = idStr;
         args[2] = schedulerPIDStr;
