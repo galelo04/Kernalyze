@@ -20,8 +20,8 @@ struct PCB {
     int arriveTime;
     int priority;
     int runningTime;
-    // Data filled by the scheduler
     pid_t pid;
+    // Data filled by the scheduler
     int* remainingTime;
     int waitTime;
     int startTime;
