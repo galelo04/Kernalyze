@@ -7,9 +7,10 @@
 
 // handle process generator signal
 void fetchProcessFromQueue();
+void schedulerClkHandler(int);
 
-// handle process exit signal
-void processExitSignalHandler(int signum);
+// Cleanup resources
+void schedulerClearResources(int);
 
 void initScheduler(int type, int quantum);
 void runScheduler();
