@@ -5,13 +5,14 @@
  * It is not a real part of operating system!
  */
 #include "clk.h"
-#include "utils/console_logger.h"
 
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/shm.h>
 #include <unistd.h>
+
+#include "utils/console_logger.h"
 
 #define SHKEY 300
 ///==============================
@@ -24,12 +25,12 @@ int shmid;
 /* Clear the resources before exit */
 void _cleanup(__attribute__((unused)) int signum) {
     shmctl(shmid, IPC_RMID, NULL);
-    printInfo("clk", "Clock terminating!");
+    printInfo("CLK", "Clock terminating!");
     exit(0);
 }
 
-void init_clk() {
-    printInfo("clk", "Clock starting");
+void initClk() {
+    printInfo("CLK", "Clock starting");
     signal(SIGINT, _cleanup);
     int clk = -1;
     // Create shared memory for one integer variable 4 bytes
@@ -46,27 +47,27 @@ void init_clk() {
     *shmaddr = clk; /* initialize shared memory */
 }
 
-void run_clk() {
+void runClk() {
     while (1) {
         usleep(500000);  // sleep for 0.5 seconds
         (*shmaddr)++;
     }
 }
 
-int get_clk() { return *shmaddr; }
+int getClk() { return *shmaddr; }
 
-void sync_clk() {
+void syncClk() {
     int shmid = shmget(SHKEY, 4, 0444);
     while ((int)shmid == -1) {
         // Make sure that the clock exists
-        printWarning("clk", "Wait! The clock not initialized yet!");
+        printWarning("CLK", "Wait! The clock not initialized yet!");
         sleep(1);
         shmid = shmget(SHKEY, 4, 0444);
     }
     shmaddr = (int *)shmat(shmid, (void *)0, 0);
 }
 
-void destroy_clk(short terminateAll) {
+void destroyClk(short terminateAll) {
     shmdt(shmaddr);
     if (terminateAll) {
         killpg(getpgrp(), SIGINT);

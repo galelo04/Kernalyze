@@ -1,13 +1,13 @@
-#include "clk.h"
-#include "defs.h"
-#include "utils/console_logger.h"
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/ipc.h>
 #include <sys/shm.h>
 #include <unistd.h>
 
-#include <signal.h>
+#include "clk.h"
+#include "defs.h"
+#include "utils/console_logger.h"
 
 int* getRemainingTimeAddr(int id) {
     key_t shmKey = ftok(SHM_KEYFILE, id);
@@ -37,29 +37,26 @@ void detachRemainingTime(int* remainingTime) {
     }
 }
 
-int main(__attribute__((unused)) int argc, char* argv[]) {
-    sync_clk();
-
+int main(int, char* argv[]) {
     int id = atoi(argv[1]);
-    // int runningTime = atoi(argv[2]);
+
+    printInfo("Process", "Process %d started with PID %d", id, getpid());
+    syncClk();
 
     int* remainingTime = getRemainingTimeAddr(id);
+    int oldClk = getClk();
 
-    char* processName = malloc(32);
-    snprintf(processName, 32, "Process %d", id);
-
-    int oldClk = get_clk();
-    // printInfo(processName, "Started with running time %d at %d", runningTime, oldClk);
-    while (*remainingTime > 1) {
-        if (get_clk() != oldClk) {
-            oldClk = get_clk();
+    // Busy-wait
+    while (1) {
+        int clk = getClk();
+        if (clk != oldClk) {
+            oldClk = clk;
+            if (*remainingTime <= 0) break;
         }
     }
 
-    // printInfo(processName, " Finished at time %d", get_clk());
-
-    // Detach shared memory
     detachRemainingTime(remainingTime);
-    // kill(getppid(), SIGUSR1);  // Notify the parent process (scheduler)
+    printSuccess("Process", "Process %d finished at time %d", id, oldClk);
+
     return 0;
 }

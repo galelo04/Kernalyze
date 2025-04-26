@@ -65,6 +65,9 @@ int heap_extract_min(struct Heap* h, void** data, int* priority);
 // Insert a new element into the Heap
 void heap_insert(struct Heap* h, void* data, int priority);
 
+// Check if the Heap is empty
+int heap_is_empty(const struct Heap* h);
+
 // Print the Heap's priorities (for debugging)
 void heap_print(const struct Heap* h);
 

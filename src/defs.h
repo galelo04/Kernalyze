@@ -1,27 +1,27 @@
 #ifndef DEFS_H
 #define DEFS_H
-#include <sys/types.h>
 #include <sys/ipc.h>
+#include <sys/types.h>
 
 #define MSG_TYPE_PCB 1
+#define MSG_TYPE_TERMINATION 2
 #define MSG_QUEUE_KEYFILE "keyfolder/queueKey.txt"
 #define SHM_KEYFILE "keyfolder/shmKey.txt"
 #define SEM_KEYFILE "keyfolder/semKey.txt"
 #define PROCESS_PATH "./process"
 
-// INITAL: not started yet
 // READY: stopped and ready to run
 // RUNNING: currently running
 // FINISHED: finished executing
-typedef enum { INITIAL, READY, RUNNING, FINISHED } PROCESS_STATE;
+typedef enum { READY, RUNNING, FINISHED } PROCESS_STATE;
 struct PCB {
     // Data from the file
     int id;
     int arriveTime;
     int priority;
     int runningTime;
-    // Data filled by the scheduler
     pid_t pid;
+    // Data filled by the scheduler
     int* remainingTime;
     int waitTime;
     int startTime;
@@ -40,6 +40,7 @@ struct ProcessData {
     int arriveTime;
     int runningTime;
     int priority;
+    pid_t pid;
 };
 
 struct PCBMessage {

@@ -167,6 +167,13 @@ void heap_insert(struct Heap* h, void* data, int priority) {
     insertHelper(h, h->size - 1);
 }
 
+// Function to check if the Heap is empty
+int heap_is_empty(const struct Heap* h) {
+    if (h == NULL) return 1;
+
+    return h->size == 0;
+}
+
 // Print the Heap's priorities (for debugging)
 void heap_print(const struct Heap* h) {
     printf("Heap contents (priorities): ");
