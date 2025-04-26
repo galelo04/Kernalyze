@@ -48,6 +48,10 @@ int main(int argc, char* argv[]) {
     // Read scheduler, quantum, filename
     parseCommandLineArgs(argc, argv);
 
+    // Read processes from file
+    struct ProcessData* processes = NULL;
+    int processCount = readProcessesFile(&processes);
+
     // Message queue for communication with scheduler
     key_t key = ftok(MSG_QUEUE_KEYFILE, 1);
     if (key == -1) {
@@ -60,10 +64,6 @@ int main(int argc, char* argv[]) {
         perror("[PG] msgget");
         raise(SIGINT);
     }
-
-    // Read processes from file
-    struct ProcessData* processes = NULL;
-    int processCount = readProcessesFile(&processes);
 
     if (processCount <= 0) {
         printError("PG", "No processes found in the file");
@@ -151,8 +151,8 @@ void parseCommandLineArgs(int argc, char* argv[]) {
 int readProcessesFile(struct ProcessData** processes) {
     FILE* file = fopen(argFilename, "r");
     if (file == NULL) {
-        perror("Failed to open input file");
-        return -1;
+        perror("[PG] Failed to open input file");
+        raise(SIGINT);
     }
 
     // Count the number of processes
