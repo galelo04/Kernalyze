@@ -49,23 +49,22 @@ void logFinish(struct PCB* pcb, int currentTime, int remainingTime) {
     fflush(logFile);
 }
 
-void logSchedulerPerformance(int idleTime, int totalTime, int numProcesses, int sumWTA,
-                             int sumWTAsquared, int sumWait) {
+void logSchedulerPerformance(int idleTime, int totalTime, int numProcesses, double sumWTA,
+                             double sumWTAsquared, int sumWait) {
     // Calculate CPU utilization
-    double utilization = (totalTime - idleTime) / (double)totalTime * 100.0;
+    double utilization = ((totalTime - idleTime) / (double)totalTime) * 100.0;
 
     // Calculate average waiting time and WTA
-    double avgWait = sumWait / (double)numProcesses;
-    double avgWTA = sumWTA / (double)numProcesses;
+    double avgWTA = sumWTA / numProcesses;
+    double avgWait = sumWait / numProcesses;
 
     // Calculate standard deviation of WTA
     double varianceWTA = (sumWTAsquared / numProcesses) - (avgWTA * avgWTA);
     double stddevWTA = sqrt(varianceWTA);
 
-    fprintf(perfFile, "CPU utilization = %.2f%%\n", utilization);
-    fprintf(perfFile, "Avg WTA = %.2f\n", avgWTA);
-    fprintf(perfFile, "Avg Waiting = %.2f\n", avgWait);
-    fprintf(perfFile, "Std WTA = %.2f\n", stddevWTA);
+    fprintf(perfFile,
+            "CPU utilization = %.2f%%\nAvg WTA = %.2f\nAvg Waiting = %.2f\nStd WTA = %.2f\n",
+            utilization, avgWTA, avgWait, stddevWTA);
     fflush(perfFile);
 }
 

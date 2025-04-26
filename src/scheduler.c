@@ -32,8 +32,8 @@ int idleTime = -1;   // time scheduler waiting and no process in the ready list
 
 // Performance metrics
 int sumWait = 0;
-int sumWTA = 0;
-int sumWTAsquared = 0;
+double sumWTA = 0;
+double sumWTAsquared = 0;
 int numPocesses = 0;
 
 int schedulerMsqid = -1;
@@ -328,11 +328,10 @@ void handleProcessExit(struct PCB *pcb) {
 
     logFinish(pcb, currentClk, remainingTime);
 
-    printWarning(
-        "Scheduler",
-        "At time %d process %d finished arr %d total %d remain %d wait %d TA %d WTA %.2f",
-        currentClk, pcb->id, pcb->arriveTime, pcb->runningTime, remainingTime, pcb->waitTime,
-        pcb->turnaroundTime, pcb->weightedTurnaroundTime);
+    printWarning("Scheduler",
+                 "At time %d process %d finished arr %d total %d remain %d wait %d TA %d WTA %.2f",
+                 currentClk, pcb->id, pcb->arriveTime, pcb->runningTime, remainingTime,
+                 pcb->waitTime, pcb->turnaroundTime, pcb->weightedTurnaroundTime);
 }
 
 void pushToReadyQueue(struct PCB *pcb) {
