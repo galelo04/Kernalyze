@@ -64,13 +64,13 @@ int main(int argc, char* argv[]) {
     signal(SIGINT, clearResources);
     signal(SIGCHLD, checkChildProcess);
 
-    sync_clk();
+    syncClk();
 
     // Main loop
     runProcessGenerator(processes, processCount, schedulerPID);
 
     free(processes);
-    destroy_clk(1);
+    destroyClk(1);
 
     return 0;
 }
@@ -195,9 +195,9 @@ pid_t createClk() {
     }
 
     if (pid == 0) {
-        init_clk();
-        sync_clk();
-        run_clk();
+        initClk();
+        syncClk();
+        runClk();
         exit(0);
     }
 
@@ -240,13 +240,13 @@ void checkChildProcess(__attribute__((unused)) int signum) {
 }
 
 void runProcessGenerator(struct ProcessData* processes, int processCount, pid_t schedulerPID) {
-    int prevClk = get_clk();
+    int prevClk = getClk();
 
     int processIndex = 0;
     int noMoreProcesses = 0;
 
     while (1) {
-        int currentClk = get_clk();
+        int currentClk = getClk();
         if (currentClk == prevClk) continue;
         prevClk = currentClk;
 

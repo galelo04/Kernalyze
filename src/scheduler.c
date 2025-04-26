@@ -81,12 +81,12 @@ void initScheduler(int type, int quantum) {
 }
 
 void runScheduler() {
-    sync_clk();
-    int oldClk = get_clk();
+    syncClk();
+    int oldClk = getClk();
     int currentClk;
 
     while (1) {
-        currentClk = get_clk();
+        currentClk = getClk();
         if (currentClk != oldClk) {
             // Check for arrived processes
             fetchProcessFromQueue();
@@ -239,7 +239,7 @@ void resumeProcess(struct PCB *pcb) {
 
     pcb->state = RUNNING;
     kill(pcb->pid, SIGCONT);
-    printf("At time %d process %d resumed arr %d total %d remain %d wait %d\n", get_clk(), pcb->id,
+    printf("At time %d process %d resumed arr %d total %d remain %d wait %d\n", getClk(), pcb->id,
            pcb->arriveTime, pcb->runningTime, *pcb->remainingTime, pcb->waitTime);
 }
 
@@ -248,7 +248,7 @@ void stopProcess(struct PCB *pcb) {
 
     pcb->state = READY;
     kill(pcb->pid, SIGSTOP);
-    printf("At time %d process %d stopped arr %d total %d remain %d wait %d\n", get_clk(), pcb->id,
+    printf("At time %d process %d stopped arr %d total %d remain %d wait %d\n", getClk(), pcb->id,
            pcb->arriveTime, pcb->runningTime, *pcb->remainingTime, pcb->waitTime);
 }
 
@@ -281,7 +281,7 @@ void handleProcessExit(pid_t pid) {
 
     // Process finished
     pcb->state = FINISHED;
-    pcb->finishTime = get_clk() - 1;  // -1 because of the clock sync
+    pcb->finishTime = getClk() - 1;  // -1 because of the clock sync
     pcb->turnaroundTime = pcb->finishTime - pcb->arriveTime;
     pcb->weightedTurnaroundTime = (double)pcb->turnaroundTime / pcb->runningTime;
     sumWaiting += pcb->waitTime;
@@ -289,8 +289,8 @@ void handleProcessExit(pid_t pid) {
     sumWeightedSquared += (pcb->weightedTurnaroundTime * pcb->weightedTurnaroundTime);
     totalTime += pcb->runningTime;
     printf("At time %d process %d finished arr %d total %d remain %d wait %d TA %.2f WTA %.2f\n",
-           get_clk(), pcb->id, pcb->arriveTime, pcb->runningTime, *pcb->remainingTime,
-           pcb->waitTime, pcb->turnaroundTime, pcb->weightedTurnaroundTime);
+           getClk(), pcb->id, pcb->arriveTime, pcb->runningTime, *pcb->remainingTime, pcb->waitTime,
+           pcb->turnaroundTime, pcb->weightedTurnaroundTime);
 }
 
 void calculatePerformance(int totalTime, int idleTime) {

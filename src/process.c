@@ -39,7 +39,7 @@ void detachRemainingTime(int* remainingTime) {
 
 int main(__attribute__((unused)) int argc, char* argv[]) {
     printf("Scheduler PID: %d\n", atoi(argv[2]));
-    sync_clk();
+    syncClk();
 
     int id = atoi(argv[1]);
     // int runningTime = atoi(argv[2]);
@@ -49,15 +49,15 @@ int main(__attribute__((unused)) int argc, char* argv[]) {
     char* processName = malloc(32);
     snprintf(processName, 32, "Process %d", id);
 
-    int oldClk = get_clk();
+    int oldClk = getClk();
     // printInfo(processName, "Started with running time %d at %d", runningTime, oldClk);
     while (*remainingTime > 1) {
-        if (get_clk() != oldClk) {
-            oldClk = get_clk();
+        if (getClk() != oldClk) {
+            oldClk = getClk();
         }
     }
 
-    // printInfo(processName, " Finished at time %d", get_clk());
+    // printInfo(processName, " Finished at time %d", getClk());
 
     // Detach shared memory
     detachRemainingTime(remainingTime);
