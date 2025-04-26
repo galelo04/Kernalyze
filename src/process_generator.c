@@ -10,6 +10,7 @@
 #include "clk.h"
 #include "scheduler.h"
 #include "utils/console_logger.h"
+#include "utils/semaphore.h"
 
 void parseCommandLineArgs(int argc, char* argv[]);
 int readProcessesFile(struct ProcessData** processes);
@@ -19,7 +20,8 @@ void checkChildProcess(int signum);
 void runProcessGenerator(struct ProcessData* processes, int processCount, pid_t schedulerPID);
 pid_t forkProcess(int id);
 void sendProcesstoScheduler(struct ProcessData* pcb, int special);
-void clearResources(int signum);
+void pgClearResources(int signum);
+void pgClkHandler(int);
 
 // Arguments
 int argSchedulerType;
@@ -29,40 +31,48 @@ char* argFilename;
 pid_t clkPID = -1;
 pid_t schedulerPID = -1;
 int pgMsgqid = -1;
+int pgCurrentClk = -1;
+int pgSemid = -1;
 
 int main(int argc, char* argv[]) {
+    // Initialize semaphore for clock
+    pgSemid = initSemaphore(2);
+
+    // Signal handlers so when the scheduler dies
+    signal(SIGINT, pgClearResources);
+    signal(SIGCHLD, checkChildProcess);
+
+    // Signal handler for clock
+    signal(SIGUSR2, pgClkHandler);
+
     // Read scheduler, quantum, filename
     parseCommandLineArgs(argc, argv);
-
-    // Message queue for communication with scheduler
-    key_t key = ftok(MSG_QUEUE_KEYFILE, 1);
-    if (key == -1) {
-        perror("[PG] ftok");
-        exit(1);
-    }
-
-    pgMsgqid = msgget(key, IPC_CREAT | 0666);
-    if (pgMsgqid == -1) {
-        perror("[PG] msgget");
-        exit(1);
-    }
 
     // Read processes from file
     struct ProcessData* processes = NULL;
     int processCount = readProcessesFile(&processes);
 
+    // Message queue for communication with scheduler
+    key_t key = ftok(MSG_QUEUE_KEYFILE, 1);
+    if (key == -1) {
+        perror("[PG] ftok");
+        raise(SIGINT);
+    }
+
+    pgMsgqid = msgget(key, IPC_CREAT | 0666);
+    if (pgMsgqid == -1) {
+        perror("[PG] msgget");
+        raise(SIGINT);
+    }
+
     if (processCount <= 0) {
-        printf("No processes found in the file\n");
-        exit(1);
+        printError("PG", "No processes found in the file");
+        raise(SIGINT);
     }
 
     // Clock & Scheduler creation
-    clkPID = createClk();
     schedulerPID = createScheduler();
-
-    // Signal handlers so when the scheduler dies
-    signal(SIGINT, clearResources);
-    signal(SIGCHLD, checkChildProcess);
+    clkPID = createClk();
 
     syncClk();
 
@@ -91,58 +101,58 @@ void parseCommandLineArgs(int argc, char* argv[]) {
                 } else if (strcmp(argv[i + 1], "hpf") == 0) {
                     argSchedulerType = 2;
                 } else {
-                    printf("Invalid scheduler type\n");
-                    exit(1);
+                    printError("PG", "Invalid scheduler type");
+                    raise(SIGINT);
                 }
                 i += 2;
             } else {
-                printf("Invalid scheduler type\n");
-                exit(1);
+                printError("PG", "Invalid scheduler type");
+                raise(SIGINT);
             }
         } else if (strcmp(argv[i], "-q") == 0) {  // Quantum for RR
             if (i + 1 < argc) {
                 argQuantum = atoi(argv[i + 1]);
                 if (argQuantum <= 0) {
-                    printf("Invalid quantum\n");
-                    exit(1);
+                    printError("PG", "Invalid quantum");
+                    raise(SIGINT);
                 }
                 i += 2;
             } else {
-                printf("Invalid quantum\n");
-                exit(1);
+                printError("PG", "Invalid quantum");
+                raise(SIGINT);
             }
         } else if (strcmp(argv[i], "-f") == 0) {  // Filename
             if (i + 1 < argc) {
                 argFilename = argv[i + 1];
                 i += 2;
             } else {
-                printf("Invalid filename\n");
-                exit(1);
+                printError("PG", "Invalid filename");
+                raise(SIGINT);
             }
         }
     }
 
     if (argFilename == NULL) {
-        printf("Invalid filename\n");
-        exit(1);
+        printError("PG", "Invalid filename");
+        raise(SIGINT);
     }
 
     if (argSchedulerType == -1) {
-        printf("Invalid scheduler type\n");
-        exit(1);
+        printError("PG", "Invalid scheduler type");
+        raise(SIGINT);
     }
 
     if (argQuantum == -1 && argSchedulerType == 0) {
-        printf("Invalid quantum for RR\n");
-        exit(1);
+        printError("PG", "Invalid quantum");
+        raise(SIGINT);
     }
 }
 
 int readProcessesFile(struct ProcessData** processes) {
     FILE* file = fopen(argFilename, "r");
     if (file == NULL) {
-        perror("Failed to open input file");
-        return -1;
+        perror("[PG] Failed to open input file");
+        raise(SIGINT);
     }
 
     // Count the number of processes
@@ -176,13 +186,9 @@ int readProcessesFile(struct ProcessData** processes) {
     return count;
 }
 
-void clearResources(__attribute__((unused)) int signum) {
-    if (msgctl(pgMsgqid, IPC_RMID, NULL) == -1) {
-        perror("[PG] msgctl");
-        exit(1);
-    }
-
+void pgClearResources(__attribute__((unused)) int signum) {
     printInfo("PG", "Process generator terminating");
+    destroySemaphore(pgSemid);
     exit(0);
 }
 
@@ -191,7 +197,7 @@ pid_t createClk() {
 
     if (pid == -1) {
         perror("[PG] Failed to fork for clk");
-        exit(1);
+        raise(SIGINT);
     }
 
     if (pid == 0) {
@@ -209,7 +215,7 @@ pid_t createScheduler() {
 
     if (pid == -1) {
         perror("[PG] Failed to fork for scheduler");
-        exit(1);
+        raise(SIGINT);
     }
 
     if (pid == 0) {
@@ -243,7 +249,7 @@ void checkChildProcess(__attribute__((unused)) int signum) {
                 schedulerPID = -1;
             }
 
-            clearResources(SIGINT);
+            pgClearResources(SIGINT);
         } else if (pid == schedulerPID) {
             if (WIFEXITED(status)) {
                 int exit_code = WEXITSTATUS(status);
@@ -261,7 +267,7 @@ void checkChildProcess(__attribute__((unused)) int signum) {
                 clkPID = -1;
             }
 
-            clearResources(SIGINT);
+            pgClearResources(SIGINT);
         } else {
             // send a message to the scheduler that the process has terminated
             struct PCBMessage msg;
@@ -271,7 +277,7 @@ void checkChildProcess(__attribute__((unused)) int signum) {
 
             if (msgsnd(pgMsgqid, &msg, sizeof(struct ProcessData), 0) == -1) {
                 perror("[PG] msgsnd");
-                exit(1);
+                raise(SIGINT);
             }
 
             printInfo("PG", "Process %d terminated", pid);
@@ -280,18 +286,13 @@ void checkChildProcess(__attribute__((unused)) int signum) {
 }
 
 void runProcessGenerator(struct ProcessData* processes, int processCount, pid_t schedulerPID) {
-    int prevClk = getClk();
-
     int processIndex = 0;
     int noMoreProcesses = 0;
 
     while (1) {
-        int currentClk = getClk();
-        if (currentClk == prevClk) continue;
-        prevClk = currentClk;
-
+        down(pgSemid);
         // Arrived processes
-        while (processIndex < processCount && processes[processIndex].arriveTime <= currentClk) {
+        while (processIndex < processCount && processes[processIndex].arriveTime == pgCurrentClk) {
             processes[processIndex].pid = forkProcess(processes[processIndex].id);
 
             sendProcesstoScheduler(&processes[processIndex], 0);
@@ -317,7 +318,7 @@ pid_t forkProcess(int id) {
 
     if (pid == -1) {
         perror("[PG] fork");
-        exit(1);
+        raise(SIGINT);
     }
 
     if (pid == 0) {
@@ -330,7 +331,7 @@ pid_t forkProcess(int id) {
         args[0] = PROCESS_PATH;
         args[1] = idStr;
         args[2] = NULL;
-
+        signal(SIGUSR2, SIG_IGN);
         // Stop the process until the scheduler starts it
         kill(getpid(), SIGSTOP);
 
@@ -339,7 +340,7 @@ pid_t forkProcess(int id) {
 
         // Error when execv
         perror("[PG] execv");
-        exit(1);
+        raise(SIGINT);
     }
 
     return pid;
@@ -360,6 +361,12 @@ void sendProcesstoScheduler(struct ProcessData* p, int special) {
 
     if (msgsnd(pgMsgqid, &msg, sizeof(struct ProcessData), 0) == -1) {
         perror("[PG] msgsnd");
-        exit(1);
+        raise(SIGINT);
     }
+}
+
+void pgClkHandler(int) {
+    pgCurrentClk = getClk();
+    up(pgSemid);
+    printError("PG", "CurrentClk: %d", pgCurrentClk);
 }

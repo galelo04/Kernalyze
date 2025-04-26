@@ -32,6 +32,7 @@ void _cleanup(__attribute__((unused)) int signum) {
 void initClk() {
     printInfo("CLK", "Clock starting");
     signal(SIGINT, _cleanup);
+    signal(SIGUSR2, SIG_IGN);
     int clk = -1;
     // Create shared memory for one integer variable 4 bytes
     shmid = shmget(SHKEY, 4, IPC_CREAT | 0644);
@@ -51,6 +52,7 @@ void runClk() {
     while (1) {
         usleep(500000);  // sleep for 0.5 seconds
         (*shmaddr)++;
+        killpg(getpgrp(), SIGUSR2);
     }
 }
 
@@ -61,7 +63,7 @@ void syncClk() {
     while ((int)shmid == -1) {
         // Make sure that the clock exists
         printWarning("CLK", "Wait! The clock not initialized yet!");
-        sleep(1);
+        usleep(100000);  // sleep for 0.1 seconds
         shmid = shmget(SHKEY, 4, 0444);
     }
     shmaddr = (int *)shmat(shmid, (void *)0, 0);

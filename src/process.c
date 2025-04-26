@@ -9,6 +9,9 @@
 #include "defs.h"
 #include "utils/console_logger.h"
 
+int shmID;
+void* shmAddr;
+
 int* getRemainingTimeAddr(int id) {
     key_t shmKey = ftok(SHM_KEYFILE, id);
     if (shmKey == -1) {
@@ -16,12 +19,12 @@ int* getRemainingTimeAddr(int id) {
         exit(EXIT_FAILURE);
     }
 
-    int shmID = shmget(shmKey, sizeof(int), IPC_CREAT | 0666);
+    shmID = shmget(shmKey, sizeof(int), IPC_CREAT | 0666);
     if (shmID == -1) {
         perror("shmget");
         exit(EXIT_FAILURE);
     }
-    void* shmAddr = shmat(shmID, NULL, 0);
+    shmAddr = shmat(shmID, NULL, 0);
     if (shmAddr == (void*)-1) {
         perror("shmat");
         exit(EXIT_FAILURE);
@@ -31,30 +34,43 @@ int* getRemainingTimeAddr(int id) {
 }
 
 void detachRemainingTime(int* remainingTime) {
-    if (shmdt(remainingTime) == -1) {
+    if (shmdt((void*)remainingTime) == -1) {
         perror("shmdt");
         exit(EXIT_FAILURE);
     }
 }
 
+int id;
+void processClearResources(int) {
+    printInfo("Process", "Process %d terminating", id);
+
+    if (shmdt(shmAddr) == -1) {
+        perror("shmdt");
+        exit(EXIT_FAILURE);
+    }
+
+    if (shmctl(shmID, IPC_RMID, NULL) == -1) {
+        perror("shmctl");
+        exit(EXIT_FAILURE);
+    }
+    exit(0);
+}
+
 int main(int, char* argv[]) {
-    int id = atoi(argv[1]);
+    id = atoi(argv[1]);
+    signal(SIGINT, processClearResources);
 
     printInfo("Process", "Process %d started with PID %d", id, getpid());
     syncClk();
 
     int* remainingTime = getRemainingTimeAddr(id);
-    int oldClk = getClk();
 
     // Busy-wait
     while (1) {
-        int clk = getClk();
-        if (clk != oldClk) {
-            oldClk = clk;
-            if (*remainingTime <= 0) break;
-        }
+        if (*remainingTime <= 0) break;
     }
 
+    int oldClk = getClk();
     detachRemainingTime(remainingTime);
     printSuccess("Process", "Process %d finished at time %d", id, oldClk);
 

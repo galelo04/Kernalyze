@@ -19,6 +19,7 @@
 #include "utils/console_logger.h"
 #include "utils/list.h"
 #include "utils/minheap.h"
+#include "utils/semaphore.h"
 
 struct List *pcbTable;
 struct PCB *currentProcess = NULL;
@@ -38,8 +39,20 @@ int noMoreProcesses = 0;   // no more processes arriving
 
 void *readyQueue = NULL;
 int remainingQuantum = 0;  // remaining quantum for current process
+int clkChanged = 0;
+int schedulerSemid = -1;
+int currentClk;
+
+void schedulerClkHandler(int) {
+    currentClk = getClk();
+    up(schedulerSemid);
+    signal(SIGUSR2, schedulerClkHandler);
+}
 
 void initScheduler(int type, int quantum) {
+    schedulerSemid = initSemaphore(1);
+    signal(SIGUSR2, schedulerClkHandler);
+    signal(SIGINT, schedulerClearResources);
     // Set scheduler parameters
     schedulerType = type;
     schedulerQuantum = quantum;
@@ -70,63 +83,60 @@ void initScheduler(int type, int quantum) {
 
 void runScheduler() {
     syncClk();
-    int oldClk = getClk();
-    int currentClk;
 
     while (1) {
-        currentClk = getClk();
-        if (currentClk != oldClk) {
-            // Check for arrived processes
-            fetchProcessFromQueue();
+        down(schedulerSemid);
 
-            // Update remaining time for running process
-            if (currentProcess != NULL) {
-                (*currentProcess->remainingTime)--;
-                remainingQuantum--;
+        printError("Scheduler", "CurrentClk: %d", currentClk);
+        // Check for arrived processes
+        fetchProcessFromQueue();
 
-                // Check for process completion
-                int isFinished = 0;
-                if (*currentProcess->remainingTime <= 0) {
-                    handleProcessExit(currentProcess);
-                    currentProcess = NULL;
-                    isFinished = 1;
-                }
+        // Update remaining time for running process
+        if (currentProcess != NULL) {
+            (*currentProcess->remainingTime)--;
+            remainingQuantum--;
 
-                // Expired quantum
-                if (remainingQuantum <= 0 && !isFinished) {
-                    pushToReadyQueue(currentProcess);
-
-                    struct PCB *nextProcess = schedule();
-                    if (nextProcess != NULL && nextProcess != currentProcess) {
-                        stopProcess(currentProcess);
-                        currentProcess = nextProcess;
-                        resumeProcess(currentProcess);
-                        remainingQuantum = schedulerQuantum;
-                    }
-                }
+            // Check for process completion
+            int isFinished = 0;
+            if (*currentProcess->remainingTime <= 0) {
+                handleProcessExit(currentProcess);
+                currentProcess = NULL;
+                isFinished = 1;
             }
 
-            // Schedule next process if none is running
-            if (currentProcess == NULL) {
+            // Expired quantum
+            if (remainingQuantum <= 0 && !isFinished) {
+                pushToReadyQueue(currentProcess);
+
                 struct PCB *nextProcess = schedule();
-                if (nextProcess != NULL) {
+                if (nextProcess != NULL && nextProcess != currentProcess) {
+                    stopProcess(currentProcess);
                     currentProcess = nextProcess;
                     resumeProcess(currentProcess);
                     remainingQuantum = schedulerQuantum;
                 }
             }
+        }
 
-            // Check if all processes are finished
-            if (noMoreProcesses && currentProcess == NULL &&
-                ((schedulerType == 0 && isEmpty((struct Queue *)readyQueue)) ||
-                 (schedulerType != 0 && heap_is_empty((struct Heap *)readyQueue)))) {
-                printInfo("Scheduler", "No more processes and ready queue is empty, terminating");
-                break;
+        // Schedule next process if none is running
+        if (currentProcess == NULL) {
+            struct PCB *nextProcess = schedule();
+            if (nextProcess != NULL) {
+                currentProcess = nextProcess;
+                resumeProcess(currentProcess);
+                remainingQuantum = schedulerQuantum;
             }
+        }
 
-            oldClk = currentClk;
+        // Check if all processes are finished
+        if (noMoreProcesses && currentProcess == NULL &&
+            ((schedulerType == 0 && isEmpty((struct Queue *)readyQueue)) ||
+             (schedulerType != 0 && heap_is_empty((struct Heap *)readyQueue)))) {
+            printInfo("Scheduler", "No more processes and ready queue is empty, terminating");
+            break;
         }
     }
+    raise(SIGINT);
 }
 
 struct PCB *schedule() {
@@ -158,7 +168,14 @@ void fetchProcessFromQueue() {
 
     struct PCBMessage msg;
 
-    while (msgrcv(schedulerMsqid, &msg, sizeof(struct PCB), MSG_TYPE_PCB, 0) != -1) {
+    while (1) {
+        int status = msgrcv(schedulerMsqid, &msg, sizeof(struct PCB), MSG_TYPE_PCB, 0);
+        if (status == -1) {
+            if (errno == EINTR) continue;
+            perror("[Scheduler] msgrcv");
+            raise(SIGINT);
+        }
+
         // No processes to fetch for this clock cycle
         if (msg.pdata.id == -1) return;
 
@@ -166,7 +183,7 @@ void fetchProcessFromQueue() {
         if (msg.pdata.id == -2) {
             noMoreProcesses = 1;
             printInfo("Scheduler", "Received signal: no more processes will arrive");
-            continue;
+            return;
         }
 
         // Create a new PCB and add it to the PCB table
@@ -246,11 +263,26 @@ void handleProcessExit(struct PCB *pcb) {
 
     // wait message from processGenerator to tell us that the process has finished
     struct PCBMessage msg;
-    int status = msgrcv(schedulerMsqid, &msg, sizeof(struct PCB), MSG_TYPE_TERMINATION, 0);
+    while (1) {
+        int status = msgrcv(schedulerMsqid, &msg, sizeof(struct PCB), MSG_TYPE_TERMINATION, 0);
+        if (status == -1) {
+            if (errno == EINTR) continue;
+            perror("[Scheduler] msgrcv");
+            raise(SIGINT);
+        }
+        break;
+    }
 
-    if (status == -1) {
-        perror("[Scheduler] msgrcv");
-        return;
+    int remainingTime = *pcb->remainingTime;
+
+    if (shmdt(pcb->shmAddr) == -1) {
+        perror("[Scheduler] shmdt");
+        exit(EXIT_FAILURE);
+    }
+
+    if (shmctl(pcb->shmID, IPC_RMID, NULL) == -1) {
+        perror("[Scheduler] shmctl");
+        exit(EXIT_FAILURE);
     }
 
     // update PCB
@@ -265,7 +297,7 @@ void handleProcessExit(struct PCB *pcb) {
     totalTime += pcb->runningTime;
 
     printWarning("Scheduler", "At time %d process %d finished arr %d total %d remain %d wait %d",
-                 getClk(), pcb->id, pcb->arriveTime, pcb->runningTime, *pcb->remainingTime,
+                 getClk(), pcb->id, pcb->arriveTime, pcb->runningTime, remainingTime,
                  pcb->waitTime);
 }
 
@@ -295,4 +327,14 @@ void pushToReadyQueue(struct PCB *pcb) {
         struct Heap *HPFreadyQueue = (struct Heap *)readyQueue;
         heap_insert(HPFreadyQueue, (void *)pcb, pcb->priority);
     }
+}
+
+void schedulerClearResources(int) {
+    printInfo("Scheduler", "Scheduler terminating");
+    destroySemaphore(schedulerSemid);
+    if (msgctl(schedulerMsqid, IPC_RMID, NULL) == -1) {
+        perror("[Scheduler] msgctl");
+        exit(EXIT_FAILURE);
+    }
+    exit(0);
 }
