@@ -16,4 +16,6 @@ void printWarning(const char* module, const char* format, ...);
 
 void printSuccess(const char* module, const char* format, ...);
 
+void printDebug(const char* module, const char* format, ...);
+
 #endif  // CONSOLE_LOGGER_H
