@@ -2,12 +2,18 @@
 #define LOGGER_H
 #include "../defs.h"
 
+enum LOG_LEVEL {
+    LOG_START,
+    LOG_RESUME,
+    LOG_STOPPED,
+    LOG_FINISH,
+};
+
+extern const char* LOG_LEVEL_STR[];
+
 void initLogger();
 
-void logStart(struct PCB* pcb, int currentTime);
-void logResume(struct PCB* pcb, int currentTime);
-void logStopped(struct PCB* pcb, int currentTime);
-void logFinish(struct PCB* pcb, int currentTime, int remainingTime);
+void logProcess(struct PCB* pcb, int currentTime, enum LOG_LEVEL level);
 void logSchedulerPerformance(int idleTime, int totalTime, int numProcesses, double sumWTA,
                              double sumWTAsquared, int sumWait);
 void destroyLogger();

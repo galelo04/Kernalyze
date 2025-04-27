@@ -5,6 +5,12 @@
 
 FILE* logFile;
 FILE* perfFile;
+const char* LOG_LEVEL_STR[] = {
+    "started",
+    "resumed",
+    "stopped",
+    "finished",
+};
 void initLogger() {
     logFile = fopen(LOG_FILE, "w");
     if (logFile == NULL) {
@@ -21,31 +27,14 @@ void initLogger() {
     fflush(perfFile);
 }
 
-void logStart(struct PCB* pcb, int currentTime) {
-    fprintf(logFile, "At time %d process %d started arr %d total %d remain %d wait %d\n",
-            currentTime, pcb->id, pcb->arriveTime, pcb->runningTime, *(pcb->remainingTime),
+void logProcess(struct PCB* pcb, int currentTime, enum LOG_LEVEL level) {
+    fprintf(logFile, "At time %d process %d %s arr %d total %d remain %d wait %d", currentTime,
+            pcb->id, LOG_LEVEL_STR[level], pcb->arriveTime, pcb->runningTime, *(pcb->remainingTime),
             pcb->waitTime);
-    fflush(logFile);
-}
-
-void logResume(struct PCB* pcb, int currentTime) {
-    fprintf(logFile, "At time %d process %d resumed arr %d total %d remain %d wait %d\n",
-            currentTime, pcb->id, pcb->arriveTime, pcb->runningTime, *(pcb->remainingTime),
-            pcb->waitTime);
-    fflush(logFile);
-}
-
-void logStopped(struct PCB* pcb, int currentTime) {
-    fprintf(logFile, "At time %d process %d stopped arr %d total %d remain %d wait %d\n",
-            currentTime, pcb->id, pcb->arriveTime, pcb->runningTime, *(pcb->remainingTime),
-            pcb->waitTime);
-    fflush(logFile);
-}
-void logFinish(struct PCB* pcb, int currentTime, int remainingTime) {
-    fprintf(logFile,
-            "At time %d process %d finished arr %d total %d remain %d wait %d TA %d WTA %.2f\n",
-            currentTime, pcb->id, pcb->arriveTime, pcb->runningTime, remainingTime, pcb->waitTime,
-            pcb->turnaroundTime, pcb->weightedTurnaroundTime);
+    if (level == LOG_FINISH) {
+        fprintf(logFile, " TA %d WTA %.2f", pcb->turnaroundTime, pcb->weightedTurnaroundTime);
+    }
+    fprintf(logFile, "\n");
     fflush(logFile);
 }
 
