@@ -46,7 +46,7 @@ void *readyQueue = NULL;
 int remainingQuantum = 0;  // remaining quantum for current process
 int clkChanged = 0;
 int schedulerSemid = -1;
-int currentClk;
+volatile sig_atomic_t currentClk;
 
 void schedulerClkHandler(int) {
     currentClk = getClk();
