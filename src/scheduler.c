@@ -165,10 +165,12 @@ struct PCB *schedule() {
         if (heap_is_empty(HPFreadyQueue)) {
             return NULL;
         } else {
-            void *data = NULL;
-            int priority = 0;
-            heap_extract_min(HPFreadyQueue, &data, &priority);
-            return (struct PCB *)data;
+            while (!isEmpty(HPFreadyQueue)) {
+                void *data = NULL;
+                int priority = 0;
+                heap_extract_min(HPFreadyQueue, &data, &priority);
+                return (struct PCB *)data;
+            }
         }
     }
     return NULL;
