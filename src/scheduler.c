@@ -163,16 +163,10 @@ struct PCB *schedule() {
         struct Queue *RRreadyQueue = (struct Queue *)readyQueue;
         if (isEmpty(RRreadyQueue)) {
             return NULL;
-        } else {
-            while (!isEmpty(RRreadyQueue)) {
-                nextProcess = (struct PCB *)dequeue(RRreadyQueue);
-                if (nextProcess->state == READY) {
-                    return nextProcess;
-                } else if (currentProcess->state == FINISHED) {
-                    continue;
-                }
-            }
-            return NULL;
+        }
+        while (!isEmpty(RRreadyQueue)) {
+            nextProcess = (struct PCB *)dequeue(RRreadyQueue);
+            if (nextProcess->state == READY) return nextProcess;
         }
     } else if (schedulerType == 1) {
         // SRTN
@@ -260,19 +254,17 @@ void resumeProcess(struct PCB *pcb) {
     if (pcb->state == FINISHED) return;
 
     pcb->state = RUNNING;
+    pcb->waitTime = currentClk - pcb->arriveTime - pcb->runningTime + *pcb->remainingTime;
+    enum LOG_LEVEL level = LOG_RESUME;
     if (pcb->startTime == -1) {
         pcb->startTime = currentClk;
-        pcb->waitTime = pcb->startTime - pcb->arriveTime;
-        logStart(pcb, currentClk);
-        printWarning("Scheduler", "At time %d process %d started arr %d total %d remain %d wait %d",
-                     currentClk, pcb->id, pcb->arriveTime, pcb->runningTime, *pcb->remainingTime,
-                     pcb->waitTime);
-    } else {
-        logResume(pcb, currentClk);
-        printWarning("Scheduler", "At time %d process %d resumed arr %d total %d remain %d wait %d",
-                     currentClk, pcb->id, pcb->arriveTime, pcb->runningTime, *pcb->remainingTime,
-                     pcb->waitTime);
+        level = LOG_START;
     }
+
+    logProcess(pcb, currentClk, level);
+    printWarning("Scheduler", "At time %d process %d %s arr %d total %d remain %d wait %d",
+                 currentClk, pcb->id, LOG_LEVEL_STR[level], pcb->arriveTime, pcb->runningTime,
+                 *pcb->remainingTime, pcb->waitTime);
     kill(pcb->pid, SIGCONT);
 }
 
@@ -280,7 +272,7 @@ void stopProcess(struct PCB *pcb) {
     if (pcb->state == FINISHED) return;
 
     pcb->state = READY;
-    logStopped(pcb, currentClk);
+    logProcess(pcb, currentClk, LOG_STOPPED);
     printWarning("Scheduler", "At time %d process %d stopped arr %d total %d remain %d wait %d",
                  currentClk, pcb->id, pcb->arriveTime, pcb->runningTime, *pcb->remainingTime,
                  pcb->waitTime);
@@ -302,19 +294,6 @@ void handleProcessExit(struct PCB *pcb) {
         break;
     }
 
-    // Save the remaining time and free the shared memory
-    int remainingTime = *pcb->remainingTime;
-
-    if (shmdt(pcb->shmAddr) == -1) {
-        perror("[Scheduler] shmdt");
-        exit(EXIT_FAILURE);
-    }
-
-    if (shmctl(pcb->shmID, IPC_RMID, NULL) == -1) {
-        perror("[Scheduler] shmctl");
-        exit(EXIT_FAILURE);
-    }
-
     // update PCB
     pcb->state = FINISHED;
     pcb->finishTime = currentClk;
@@ -326,12 +305,23 @@ void handleProcessExit(struct PCB *pcb) {
     sumWTA += pcb->weightedTurnaroundTime;
     sumWTAsquared += pcb->weightedTurnaroundTime * pcb->weightedTurnaroundTime;
 
-    logFinish(pcb, currentClk, remainingTime);
-
     printWarning("Scheduler",
                  "At time %d process %d finished arr %d total %d remain %d wait %d TA %d WTA %.2f",
-                 currentClk, pcb->id, pcb->arriveTime, pcb->runningTime, remainingTime,
+                 currentClk, pcb->id, pcb->arriveTime, pcb->runningTime, *pcb->remainingTime,
                  pcb->waitTime, pcb->turnaroundTime, pcb->weightedTurnaroundTime);
+
+    logProcess(pcb, currentClk, LOG_FINISH);
+
+    // free the shared memory
+    if (shmdt(pcb->shmAddr) == -1) {
+        perror("[Scheduler] shmdt");
+        exit(EXIT_FAILURE);
+    }
+
+    if (shmctl(pcb->shmID, IPC_RMID, NULL) == -1) {
+        perror("[Scheduler] shmctl");
+        exit(EXIT_FAILURE);
+    }
 }
 
 void pushToReadyQueue(struct PCB *pcb) {
