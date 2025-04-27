@@ -121,6 +121,8 @@ void runScheduler() {
                     stopProcess(currentProcess);
                     currentProcess = nextProcess;
                     resumeProcess(currentProcess);
+                } else {
+                    currentProcess->state = RUNNING;
                 }
                 remainingQuantum = schedulerQuantum;
             }
@@ -325,6 +327,8 @@ void handleProcessExit(struct PCB *pcb) {
 }
 
 void pushToReadyQueue(struct PCB *pcb) {
+    if (pcb->state == FINISHED) return;
+    pcb->state = READY;
     if (schedulerType == 0) {
         // Round Robin
         struct Queue *RRreadyQueue = (struct Queue *)readyQueue;
