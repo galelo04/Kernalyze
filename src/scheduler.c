@@ -176,24 +176,14 @@ struct PCB *schedule() {
             nextProcess = (struct PCB *)dequeue(RRreadyQueue);
             if (nextProcess->state == READY) return nextProcess;
         }
-    } else if (schedulerType == 1) {
-        // SRTN
-        struct Heap *SRTNreadyQueue = (struct Heap *)readyQueue;
-        if (heap_is_empty(SRTNreadyQueue)) {
+    } else if (schedulerType == 1 || schedulerType == 2) {
+        // SRTN and HPF
+        struct Heap *priorityReadyQueue = (struct Heap *)readyQueue;
+        if (heap_is_empty(priorityReadyQueue)) {
             return NULL;
         }
-        while (!heap_is_empty(SRTNreadyQueue)) {
-            heap_extract_min(SRTNreadyQueue, (void **)&nextProcess, NULL);
-            if (nextProcess->state == READY) return nextProcess;
-        }
-    } else if (schedulerType == 2) {
-        // HPF
-        struct Heap *HPFreadyQueue = (struct Heap *)readyQueue;
-        if (heap_is_empty(HPFreadyQueue)) {
-            return NULL;
-        }
-        while (!heap_is_empty(HPFreadyQueue)) {
-            heap_extract_min(HPFreadyQueue, (void **)&nextProcess, NULL);
+        while (!heap_is_empty(priorityReadyQueue)) {
+            heap_extract_min(priorityReadyQueue, (void **)&nextProcess, NULL);
             if (nextProcess->state == READY) return nextProcess;
         }
     }
