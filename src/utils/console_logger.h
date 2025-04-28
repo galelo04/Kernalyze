@@ -8,14 +8,14 @@
 
 #include "colors.h"
 
-void printInfo(const char* module, const char* format, ...);
+typedef enum {
+    CONSOLE_LOG_INFO,
+    CONSOLE_LOG_ERROR,
+    CONSOLE_LOG_WARNING,
+    CONSOLE_LOG_SUCCESS,
+    CONSOLE_LOG_DEBUG
+} CONSOLE_LOG_LEVEL;
 
-void printError(const char* module, const char* format, ...);
-
-void printWarning(const char* module, const char* format, ...);
-
-void printSuccess(const char* module, const char* format, ...);
-
-void printDebug(const char* module, const char* format, ...);
+void printLog(CONSOLE_LOG_LEVEL level, const char* module, const char* format, ...);
 
 #endif  // CONSOLE_LOGGER_H
