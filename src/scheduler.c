@@ -114,7 +114,7 @@ void runScheduler() {
             }
 
             // Expired quantum
-            if (schedulerType !=2 && remainingQuantum <= 0 && !isFinished) {
+            if (schedulerType != 2 && remainingQuantum <= 0 && !isFinished) {
                 pushToReadyQueue(currentProcess);
 
                 fetchProcessFromQueue();
@@ -182,6 +182,7 @@ struct PCB *schedule() {
         while (!heap_is_empty(SRTNreadyQueue)) {
             heap_extract_min(SRTNreadyQueue, (void **)&nextProcess, NULL);
             if (nextProcess->state == READY) return nextProcess;
+        }
     } else if (schedulerType == 2) {
         // HPF
         struct Heap *HPFreadyQueue = (struct Heap *)readyQueue;
