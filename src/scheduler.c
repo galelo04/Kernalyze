@@ -172,6 +172,14 @@ struct PCB *schedule() {
         }
     } else if (schedulerType == 1) {
         // SRTN
+        struct Heap *SRTNreadyQueue = (struct Heap *)readyQueue;
+        if (heap_is_empty(SRTNreadyQueue)) {
+            return NULL;
+        }
+        while (!heap_is_empty(SRTNreadyQueue)) {
+            heap_extract_min(SRTNreadyQueue,(void ** )&nextProcess,NULL);
+            if (nextProcess->state == READY) return nextProcess;
+        }
     }
     return NULL;
 }
