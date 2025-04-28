@@ -188,7 +188,14 @@ int readProcessesFile(struct ProcessData** processes) {
 
 void pgClearResources(__attribute__((unused)) int signum) {
     printLog(CONSOLE_LOG_INFO, "PG", "Process generator terminating");
+
+    // Clean up message queue if it exists
+    if (pgMsgqid != -1 && msgctl(pgMsgqid, IPC_RMID, NULL) == -1)
+        perror("[PG] Failed to remove message queue");
+
     destroySemaphore(pgSemid);
+    killpg(getpgrp(), SIGTERM);
+
     exit(0);
 }
 
