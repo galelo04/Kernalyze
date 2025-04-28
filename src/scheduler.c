@@ -18,9 +18,9 @@
 #include "utils/circularQueue.h"
 #include "utils/console_logger.h"
 #include "utils/list.h"
+#include "utils/logger.h"
 #include "utils/minheap.h"
 #include "utils/semaphore.h"
-#include "utils/logger.h"
 
 struct List *pcbTable;
 struct PCB *currentProcess = NULL;
@@ -97,10 +97,8 @@ void runScheduler() {
 
         printError("Scheduler", "CurrentClk: %d", currentClk);
 
-        
         // Check for arrived processes
-        if(currentProcess==NULL || remainingQuantum-1>0)
-        fetchProcessFromQueue();
+        if (currentProcess == NULL || remainingQuantum - 1 > 0) fetchProcessFromQueue();
 
         // Update remaining time for running process
         if (currentProcess != NULL) {
@@ -182,7 +180,7 @@ struct PCB *schedule() {
             return NULL;
         }
         while (!heap_is_empty(SRTNreadyQueue)) {
-            heap_extract_min(SRTNreadyQueue,(void ** )&nextProcess,NULL);
+            heap_extract_min(SRTNreadyQueue, (void **)&nextProcess, NULL);
             if (nextProcess->state == READY) return nextProcess;
         }
     }
