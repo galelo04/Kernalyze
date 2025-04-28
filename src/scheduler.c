@@ -68,13 +68,13 @@ void initScheduler(int type, int quantum) {
     key_t key = ftok(MSG_QUEUE_KEYFILE, 1);
     if (key == -1) {
         perror("[Scheduler] ftok");
-        exit(EXIT_FAILURE);
+        raise(SIGINT);
     }
 
     schedulerMsqid = msgget(key, IPC_CREAT | 0666);
     if (schedulerMsqid == -1) {
         perror("[Scheduler] msgget");
-        exit(EXIT_FAILURE);
+        raise(SIGINT);
     }
 
     // Init queue
@@ -218,7 +218,7 @@ void fetchProcessFromQueue() {
         struct PCB *pcb = (struct PCB *)malloc(sizeof(struct PCB));
         if (pcb == NULL) {
             perror("malloc");
-            exit(EXIT_FAILURE);
+            raise(SIGINT);
         }
 
         // Data from generator
@@ -240,19 +240,19 @@ void fetchProcessFromQueue() {
         pcb->shmKey = ftok(SHM_KEYFILE, pcb->id);
         if (pcb->shmKey == -1) {
             perror("[Scheduler] ftok");
-            exit(EXIT_FAILURE);
+            raise(SIGINT);
         }
 
         pcb->shmID = shmget(pcb->shmKey, sizeof(int), IPC_CREAT | 0666);
         if (pcb->shmID == -1) {
             perror("[Scheduler] shmget");
-            exit(EXIT_FAILURE);
+            raise(SIGINT);
         }
 
         pcb->shmAddr = shmat(pcb->shmID, NULL, 0);
         if (pcb->shmAddr == (void *)-1) {
             perror("[Scheduler] shmat");
-            exit(EXIT_FAILURE);
+            raise(SIGINT);
         }
 
         pcb->remainingTime = (int *)pcb->shmAddr;
@@ -334,12 +334,12 @@ void handleProcessExit(struct PCB *pcb) {
     // free the shared memory
     if (shmdt(pcb->shmAddr) == -1) {
         perror("[Scheduler] shmdt");
-        exit(EXIT_FAILURE);
+        raise(SIGINT);
     }
 
     if (shmctl(pcb->shmID, IPC_RMID, NULL) == -1) {
         perror("[Scheduler] shmctl");
-        exit(EXIT_FAILURE);
+        raise(SIGINT);
     }
     pcb->shmAddr = NULL;
     pcb->remainingTime = NULL;
