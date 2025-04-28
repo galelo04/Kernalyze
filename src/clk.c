@@ -25,12 +25,12 @@ int shmid;
 /* Clear the resources before exit */
 void _cleanup(__attribute__((unused)) int signum) {
     shmctl(shmid, IPC_RMID, NULL);
-    printInfo("CLK", "Clock terminating!");
+    printLog(CONSOLE_LOG_INFO, "CLK", "Clock terminating!");
     exit(0);
 }
 
 void initClk() {
-    printInfo("CLK", "Clock starting");
+    printLog(CONSOLE_LOG_INFO, "CLK", "Clock starting");
     signal(SIGINT, _cleanup);
     signal(SIGUSR2, SIG_IGN);
     int clk = -1;
@@ -62,7 +62,7 @@ void syncClk() {
     int shmid = shmget(SHKEY, 4, 0444);
     while ((int)shmid == -1) {
         // Make sure that the clock exists
-        printWarning("CLK", "Wait! The clock not initialized yet!");
+        printLog(CONSOLE_LOG_WARNING, "CLK", "Wait! The clock not initialized yet!");
         usleep(10000);  // sleep for 0.1 seconds
         shmid = shmget(SHKEY, 4, 0444);
     }
