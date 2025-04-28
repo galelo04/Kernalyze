@@ -2,7 +2,6 @@
 
 // Define the CONSOLE_LOG_LEVEL enumeration
 
-
 void printLog(CONSOLE_LOG_LEVEL level, const char* module, const char* format, ...) {
     switch (level) {
         case CONSOLE_LOG_INFO:
@@ -36,7 +35,7 @@ void printLog(CONSOLE_LOG_LEVEL level, const char* module, const char* format, .
 // Example usage of the printLog function
 // int main() {
 //     printLog(CONSOLE_LOG_INFO, "Main", "This is an info message.");
-//     printLog(CONSOLE_LOG_ERROR, "Main", "This is an error message.");    
+//     printLog(CONSOLE_LOG_ERROR, "Main", "This is an error message.");
 //     printLog(CONSOLE_LOG_WARNING, "Main", "This is a warning message.");
 //     printLog(CONSOLE_LOG_SUCCESS, "Main", "This is a success message.");
 //     printLog(CONSOLE_LOG_DEBUG, "Main", "This is a debug message.");

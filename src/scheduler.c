@@ -95,7 +95,6 @@ void runScheduler() {
 
         totalTime++;
 
-
         printLog(CONSOLE_LOG_ERROR, "Scheduler", "CurrentClk: %d", currentClk);
 
         // Check for arrived processes
