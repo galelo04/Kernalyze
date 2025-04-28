@@ -340,6 +340,10 @@ void handleProcessExit(struct PCB *pcb) {
         perror("[Scheduler] shmctl");
         exit(EXIT_FAILURE);
     }
+    pcb->shmAddr = NULL;
+    pcb->remainingTime = NULL;
+    pcb->shmID = -1;
+    pcb->shmKey = -1;
 }
 
 void pushToReadyQueue(struct PCB *pcb) {
@@ -369,6 +373,14 @@ void schedulerClearResources(int) {
     struct Node *node = pcbTable->head;
     while (node != NULL) {
         struct PCB *pcb = (struct PCB *)node->data;
+        if (pcb->shmAddr != NULL) {
+            if (shmdt(pcb->shmAddr) == -1) {
+                perror("[Scheduler] shmdt");
+            }
+            if (shmctl(pcb->shmID, IPC_RMID, NULL) == -1) {
+                perror("[Scheduler] shmctl");
+            }
+        }
         free(pcb);
         node = node->next;
     }
