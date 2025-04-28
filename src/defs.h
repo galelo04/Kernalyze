@@ -11,6 +11,8 @@
 #define PROCESS_PATH "./process"
 #define LOG_FILE "scheduler.log"
 #define PERFORMANCE_FILE "scheduler.perf"
+#define SCHEDULER_SEMAPHORE 1
+#define PG_SEMAPHORE 2
 
 // READY: stopped and ready to run
 // RUNNING: currently running

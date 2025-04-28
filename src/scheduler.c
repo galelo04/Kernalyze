@@ -55,7 +55,7 @@ void schedulerClkHandler(int) {
 }
 
 void initScheduler(int type, int quantum) {
-    schedulerSemid = initSemaphore(1);
+    schedulerSemid = initSemaphore(SCHEDULER_SEMAPHORE);
     initLogger();
     signal(SIGUSR2, schedulerClkHandler);
     signal(SIGINT, schedulerClearResources);

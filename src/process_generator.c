@@ -36,7 +36,7 @@ int pgSemid = -1;
 
 int main(int argc, char* argv[]) {
     // Initialize semaphore for clock
-    pgSemid = initSemaphore(2);
+    pgSemid = initSemaphore(PG_SEMAPHORE);
 
     // Signal handlers so when the scheduler dies
     signal(SIGINT, pgClearResources);
