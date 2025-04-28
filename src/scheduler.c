@@ -357,11 +357,11 @@ void pushToReadyQueue(struct PCB *pcb) {
     } else if (schedulerType == 1) {
         // SJF
         struct Heap *SJFreadyQueue = (struct Heap *)readyQueue;
-        heap_insert(SJFreadyQueue, (void *)pcb, *pcb->remainingTime);
+        heap_insert(SJFreadyQueue, (void *)pcb, (*pcb->remainingTime)*10000+pcb->id);
     } else if (schedulerType == 2) {
         // Priority
         struct Heap *HPFreadyQueue = (struct Heap *)readyQueue;
-        heap_insert(HPFreadyQueue, (void *)pcb, pcb->priority);
+        heap_insert(HPFreadyQueue, (void *)pcb, (pcb->priority)*10000 + pcb->id);
     }
 }
 
