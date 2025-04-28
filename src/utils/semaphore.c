@@ -1,13 +1,14 @@
 #include "semaphore.h"
-#include "../defs.h"
 
 #include <errno.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/ipc.h>
 #include <sys/sem.h>
 #include <sys/types.h>
-#include <signal.h>
+
+#include "../defs.h"
 
 union semun {
     int val;

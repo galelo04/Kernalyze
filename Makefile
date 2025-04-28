@@ -20,12 +20,13 @@ $(OBJ)/%.c.o: $(SRC)/%.c
 # Build process executable
 $(TARGET_PROCESS): $(OBJ_FILES_PROCESS)
 	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) -o $@ $^
+	$(CC) -o $@ $^ $(CFLAGS)
 
 # Build process_generator executable
 $(TARGET_PROCESS_GENERATOR): $(OBJ_FILES_PROCESS_GENERATOR)
 	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) -o $@ $^
+	$(CC) -o $@ $^ $(CFLAGS)
+
 
 # Build all targets (process and process_generator)
 all: $(TARGET_PROCESS) $(TARGET_PROCESS_GENERATOR) keyfile

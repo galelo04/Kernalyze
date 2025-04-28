@@ -1,7 +1,8 @@
 #include "logger.h"
+
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <math.h>
 
 FILE* logFile;
 FILE* perfFile;
