@@ -23,6 +23,7 @@
 #include "utils/semaphore.h"
 
 struct List *pcbTable;
+void *readyQueue = NULL;
 struct PCB *currentProcess = NULL;
 
 // Note that they start at -1 to be the same as the clk
@@ -42,14 +43,13 @@ int schedulerType = 0;     // 0: RR, 1: SRTN, 2: HPF
 int schedulerQuantum = 1;  // quantum time for RR
 int noMoreProcesses = 0;   // no more processes arriving
 
-void *readyQueue = NULL;
 int remainingQuantum = 0;  // remaining quantum for current process
 int clkChanged = 0;
 int schedulerSemid = -1;
-volatile sig_atomic_t currentClk;
+volatile sig_atomic_t schedulerCurrentClk;
 
 void schedulerClkHandler(int) {
-    currentClk = getClk();
+    schedulerCurrentClk = getClk();
     up(schedulerSemid);
     signal(SIGUSR2, schedulerClkHandler);
 }
@@ -95,7 +95,7 @@ void runScheduler() {
 
         totalTime++;
 
-        printLog(CONSOLE_LOG_ERROR, "Scheduler", "CurrentClk: %d", currentClk);
+        printLog(CONSOLE_LOG_ERROR, "Scheduler", "CurrentClk: %d", schedulerCurrentClk);
 
         // Check for arrived processes
         fetchProcessFromQueue();
@@ -281,17 +281,17 @@ void resumeProcess(struct PCB *pcb) {
     if (pcb->state == FINISHED) return;
 
     pcb->state = RUNNING;
-    pcb->waitTime = currentClk - pcb->arriveTime - pcb->runningTime + *pcb->remainingTime;
+    pcb->waitTime = schedulerCurrentClk - pcb->arriveTime - pcb->runningTime + *pcb->remainingTime;
     enum LOG_LEVEL level = LOG_RESUME;
     if (pcb->startTime == -1) {
-        pcb->startTime = currentClk;
+        pcb->startTime = schedulerCurrentClk;
         level = LOG_START;
     }
 
-    logProcess(pcb, currentClk, level);
+    logProcess(pcb, schedulerCurrentClk, level);
     printLog(CONSOLE_LOG_WARNING, "Scheduler",
-             "At time %d process %d %s arr %d total %d remain %d wait %d", currentClk, pcb->id,
-             LOG_LEVEL_STR[level], pcb->arriveTime, pcb->runningTime, *pcb->remainingTime,
+             "At time %d process %d %s arr %d total %d remain %d wait %d", schedulerCurrentClk,
+             pcb->id, LOG_LEVEL_STR[level], pcb->arriveTime, pcb->runningTime, *pcb->remainingTime,
              pcb->waitTime);
     kill(pcb->pid, SIGCONT);
 }
@@ -300,10 +300,10 @@ void stopProcess(struct PCB *pcb) {
     if (pcb->state == FINISHED) return;
 
     pcb->state = READY;
-    logProcess(pcb, currentClk, LOG_STOPPED);
+    logProcess(pcb, schedulerCurrentClk, LOG_STOPPED);
     printLog(CONSOLE_LOG_WARNING, "Scheduler",
-             "At time %d process %d stopped arr %d total %d remain %d wait %d", currentClk, pcb->id,
-             pcb->arriveTime, pcb->runningTime, *pcb->remainingTime, pcb->waitTime);
+             "At time %d process %d stopped arr %d total %d remain %d wait %d", schedulerCurrentClk,
+             pcb->id, pcb->arriveTime, pcb->runningTime, *pcb->remainingTime, pcb->waitTime);
     kill(pcb->pid, SIGSTOP);
 }
 
@@ -324,7 +324,7 @@ void handleProcessExit(struct PCB *pcb) {
 
     // update PCB
     pcb->state = FINISHED;
-    pcb->finishTime = currentClk;
+    pcb->finishTime = schedulerCurrentClk;
     pcb->turnaroundTime = pcb->finishTime - pcb->arriveTime;
     pcb->weightedTurnaroundTime = (double)pcb->turnaroundTime / pcb->runningTime;
 
@@ -335,10 +335,10 @@ void handleProcessExit(struct PCB *pcb) {
 
     printLog(CONSOLE_LOG_WARNING, "Scheduler",
              "At time %d process %d finished arr %d total %d remain %d wait %d TA %d WTA %.2f",
-             currentClk, pcb->id, pcb->arriveTime, pcb->runningTime, *pcb->remainingTime,
+             schedulerCurrentClk, pcb->id, pcb->arriveTime, pcb->runningTime, *pcb->remainingTime,
              pcb->waitTime, pcb->turnaroundTime, pcb->weightedTurnaroundTime);
 
-    logProcess(pcb, currentClk, LOG_FINISH);
+    logProcess(pcb, schedulerCurrentClk, LOG_FINISH);
 
     // free the shared memory
     if (shmdt(pcb->shmAddr) == -1) {
@@ -374,6 +374,26 @@ void schedulerClearResources(int) {
     printLog(CONSOLE_LOG_INFO, "Scheduler", "Scheduler terminating");
     destroySemaphore(schedulerSemid);
     destroyLogger();
+
+    // Free the PCB table
+    struct Node *node = pcbTable->head;
+    while (node != NULL) {
+        struct PCB *pcb = (struct PCB *)node->data;
+        free(pcb);
+        node = node->next;
+    }
+    freeList(pcbTable);
+
+    // Free the ready queue
+    if (schedulerType == 0) {
+        struct Queue *RRreadyQueue = (struct Queue *)readyQueue;
+        destroyQueue(RRreadyQueue);
+    } else if (schedulerType == 1 || schedulerType == 2) {
+        struct Heap *priorityQueue = (struct Heap *)readyQueue;
+        heap_destroy(priorityQueue);
+    }
+
+    // Destroy the message queue
     if (msgctl(schedulerMsqid, IPC_RMID, NULL) == -1) {
         perror("[Scheduler] msgctl");
         exit(EXIT_FAILURE);
