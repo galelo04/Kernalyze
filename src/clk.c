@@ -17,7 +17,7 @@
 #define SHKEY 300
 ///==============================
 // don't mess with this variable//
-int *shmaddr = NULL;  //
+int *clkShmAddr = NULL;  //
 //===============================
 
 int shmid;
@@ -40,37 +40,37 @@ void initClk() {
         perror("Error in creating shm!");
         exit(-1);
     }
-    int *shmaddr = (int *)shmat(shmid, (void *)0, 0);
-    if ((long)shmaddr == -1) {
+    int *clkShmAddr = (int *)shmat(shmid, (void *)0, 0);
+    if ((long)clkShmAddr == -1) {
         perror("Error in attaching the shm in clock!");
         exit(-1);
     }
-    *shmaddr = clk; /* initialize shared memory */
+    *clkShmAddr = clk; /* initialize shared memory */
 }
 
 void runClk() {
     while (1) {
-        usleep(500000);  // sleep for 0.5 seconds
-        (*shmaddr)++;
+        usleep(50000);  // sleep for 0.5 seconds
+        (*clkShmAddr)++;
         killpg(getpgrp(), SIGUSR2);
     }
 }
 
-int getClk() { return *shmaddr; }
+int getClk() { return *clkShmAddr; }
 
 void syncClk() {
     int shmid = shmget(SHKEY, 4, 0444);
     while ((int)shmid == -1) {
         // Make sure that the clock exists
         printWarning("CLK", "Wait! The clock not initialized yet!");
-        usleep(100000);  // sleep for 0.1 seconds
+        usleep(10000);  // sleep for 0.1 seconds
         shmid = shmget(SHKEY, 4, 0444);
     }
-    shmaddr = (int *)shmat(shmid, (void *)0, 0);
+    clkShmAddr = (int *)shmat(shmid, (void *)0, 0);
 }
 
 void destroyClk(short terminateAll) {
-    shmdt(shmaddr);
+    shmdt(clkShmAddr);
     if (terminateAll) {
         killpg(getpgrp(), SIGINT);
     }

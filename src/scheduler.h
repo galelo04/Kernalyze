@@ -19,10 +19,10 @@ void runScheduler();
 void resumeProcess(struct PCB* pcb);
 void stopProcess(struct PCB* pcb);
 
-// calculate performance
+// handle process exit
 void handleProcessExit(struct PCB* pcb);
-void calculatePerformance(int totalTime, int idleTime);
 
+// scheduler
 struct PCB* schedule();
 void pushToReadyQueue(struct PCB* pcb);
 

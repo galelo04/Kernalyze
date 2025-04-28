@@ -9,6 +9,8 @@
 #define SHM_KEYFILE "keyfolder/shmKey.txt"
 #define SEM_KEYFILE "keyfolder/semKey.txt"
 #define PROCESS_PATH "./process"
+#define LOG_FILE "scheduler.log"
+#define PERFORMANCE_FILE "scheduler.perf"
 
 // READY: stopped and ready to run
 // RUNNING: currently running
@@ -26,7 +28,7 @@ struct PCB {
     int waitTime;
     int startTime;
     int finishTime;
-    double turnaroundTime;
+    int turnaroundTime;
     double weightedTurnaroundTime;
     PROCESS_STATE state;
 

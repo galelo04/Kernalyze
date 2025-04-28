@@ -20,18 +20,23 @@
 #include "utils/list.h"
 #include "utils/minheap.h"
 #include "utils/semaphore.h"
+#include "utils/logger.h"
 
 struct List *pcbTable;
 struct PCB *currentProcess = NULL;
-int totalTime = 0;  // total time scheduler running
 
-int idleTime = 0;  // time scheduler waiting and no process in the ready list
+// Note that they start at -1 to be the same as the clk
+// As the clk start with -1 to send SIGUSR2 to the scheduler at time 0
+int totalTime = -1;  // total time scheduler running
+int idleTime = -1;   // time scheduler waiting and no process in the ready list
 
-double sumWaiting = 0;
-int sumWeightedTurnaround = 0;
-int sumWeightedSquared = 0;
+// Performance metrics
+int sumWait = 0;
+double sumWTA = 0;
+double sumWTAsquared = 0;
+int numPocesses = 0;
+
 int schedulerMsqid = -1;
-
 // Scheduler parameters
 int schedulerType = 0;     // 0: RR, 1: SRTN, 2: HPF
 int schedulerQuantum = 1;  // quantum time for RR
@@ -41,7 +46,7 @@ void *readyQueue = NULL;
 int remainingQuantum = 0;  // remaining quantum for current process
 int clkChanged = 0;
 int schedulerSemid = -1;
-int currentClk;
+volatile sig_atomic_t currentClk;
 
 void schedulerClkHandler(int) {
     currentClk = getClk();
@@ -51,6 +56,7 @@ void schedulerClkHandler(int) {
 
 void initScheduler(int type, int quantum) {
     schedulerSemid = initSemaphore(1);
+    initLogger();
     signal(SIGUSR2, schedulerClkHandler);
     signal(SIGINT, schedulerClearResources);
     // Set scheduler parameters
@@ -87,6 +93,8 @@ void runScheduler() {
     while (1) {
         down(schedulerSemid);
 
+        totalTime++;
+
         printError("Scheduler", "CurrentClk: %d", currentClk);
         // Check for arrived processes
         fetchProcessFromQueue();
@@ -113,8 +121,10 @@ void runScheduler() {
                     stopProcess(currentProcess);
                     currentProcess = nextProcess;
                     resumeProcess(currentProcess);
-                    remainingQuantum = schedulerQuantum;
+                } else {
+                    currentProcess->state = RUNNING;
                 }
+                remainingQuantum = schedulerQuantum;
             }
         }
 
@@ -128,6 +138,11 @@ void runScheduler() {
             }
         }
 
+        if (currentProcess == NULL) {
+            // No process is running, increment idle time
+            idleTime++;
+        }
+
         // Check if all processes are finished
         if (noMoreProcesses && currentProcess == NULL &&
             ((schedulerType == 0 && isEmpty((struct Queue *)readyQueue)) ||
@@ -136,6 +151,10 @@ void runScheduler() {
             break;
         }
     }
+    // Calculate performance metrics
+    logSchedulerPerformance(idleTime, totalTime, numPocesses, sumWTA, sumWTAsquared, sumWait);
+    printSuccess("Scheduler", "TotalTime: %d, IdleTime: %d, Processes: %d", totalTime, idleTime,
+                 numPocesses);
     raise(SIGINT);
 }
 
@@ -146,16 +165,10 @@ struct PCB *schedule() {
         struct Queue *RRreadyQueue = (struct Queue *)readyQueue;
         if (isEmpty(RRreadyQueue)) {
             return NULL;
-        } else {
-            while (!isEmpty(RRreadyQueue)) {
-                nextProcess = (struct PCB *)dequeue(RRreadyQueue);
-                if (nextProcess->state == READY) {
-                    return nextProcess;
-                } else if (currentProcess->state == FINISHED) {
-                    continue;
-                }
-            }
-            return NULL;
+        }
+        while (!isEmpty(RRreadyQueue)) {
+            nextProcess = (struct PCB *)dequeue(RRreadyQueue);
+            if (nextProcess->state == READY) return nextProcess;
         }
     } else if (schedulerType == 1) {
         // SRTN
@@ -202,9 +215,9 @@ void fetchProcessFromQueue() {
 
         // default values
         pcb->state = READY;
-        pcb->startTime = 0;
-        pcb->finishTime = 0;
-        pcb->waitTime = 0;
+        pcb->startTime = -1;
+        pcb->finishTime = -1;
+        pcb->waitTime = -1;
         pcb->turnaroundTime = 0;
         pcb->weightedTurnaroundTime = 0;
 
@@ -235,6 +248,7 @@ void fetchProcessFromQueue() {
                   pcb->arriveTime, pcb->pid);
 
         pushToReadyQueue(pcb);
+        numPocesses++;
     }
 }
 
@@ -242,20 +256,29 @@ void resumeProcess(struct PCB *pcb) {
     if (pcb->state == FINISHED) return;
 
     pcb->state = RUNNING;
+    pcb->waitTime = currentClk - pcb->arriveTime - pcb->runningTime + *pcb->remainingTime;
+    enum LOG_LEVEL level = LOG_RESUME;
+    if (pcb->startTime == -1) {
+        pcb->startTime = currentClk;
+        level = LOG_START;
+    }
+
+    logProcess(pcb, currentClk, level);
+    printWarning("Scheduler", "At time %d process %d %s arr %d total %d remain %d wait %d",
+                 currentClk, pcb->id, LOG_LEVEL_STR[level], pcb->arriveTime, pcb->runningTime,
+                 *pcb->remainingTime, pcb->waitTime);
     kill(pcb->pid, SIGCONT);
-    printWarning("Scheduler", "At time %d process %d resumed arr %d total %d remain %d wait %d",
-                 getClk(), pcb->id, pcb->arriveTime, pcb->runningTime, *pcb->remainingTime,
-                 pcb->waitTime);
 }
 
 void stopProcess(struct PCB *pcb) {
     if (pcb->state == FINISHED) return;
 
     pcb->state = READY;
-    kill(pcb->pid, SIGSTOP);
+    logProcess(pcb, currentClk, LOG_STOPPED);
     printWarning("Scheduler", "At time %d process %d stopped arr %d total %d remain %d wait %d",
-                 getClk(), pcb->id, pcb->arriveTime, pcb->runningTime, *pcb->remainingTime,
+                 currentClk, pcb->id, pcb->arriveTime, pcb->runningTime, *pcb->remainingTime,
                  pcb->waitTime);
+    kill(pcb->pid, SIGSTOP);
 }
 
 void handleProcessExit(struct PCB *pcb) {
@@ -273,8 +296,25 @@ void handleProcessExit(struct PCB *pcb) {
         break;
     }
 
-    int remainingTime = *pcb->remainingTime;
+    // update PCB
+    pcb->state = FINISHED;
+    pcb->finishTime = currentClk;
+    pcb->turnaroundTime = pcb->finishTime - pcb->arriveTime;
+    pcb->weightedTurnaroundTime = (double)pcb->turnaroundTime / pcb->runningTime;
 
+    // update performance metrics
+    sumWait += pcb->waitTime;
+    sumWTA += pcb->weightedTurnaroundTime;
+    sumWTAsquared += pcb->weightedTurnaroundTime * pcb->weightedTurnaroundTime;
+
+    printWarning("Scheduler",
+                 "At time %d process %d finished arr %d total %d remain %d wait %d TA %d WTA %.2f",
+                 currentClk, pcb->id, pcb->arriveTime, pcb->runningTime, *pcb->remainingTime,
+                 pcb->waitTime, pcb->turnaroundTime, pcb->weightedTurnaroundTime);
+
+    logProcess(pcb, currentClk, LOG_FINISH);
+
+    // free the shared memory
     if (shmdt(pcb->shmAddr) == -1) {
         perror("[Scheduler] shmdt");
         exit(EXIT_FAILURE);
@@ -284,36 +324,11 @@ void handleProcessExit(struct PCB *pcb) {
         perror("[Scheduler] shmctl");
         exit(EXIT_FAILURE);
     }
-
-    // update PCB
-    pcb->state = FINISHED;
-    pcb->finishTime = getClk();
-    pcb->turnaroundTime = pcb->finishTime - pcb->arriveTime;
-    pcb->weightedTurnaroundTime = (double)pcb->turnaroundTime / pcb->runningTime;
-
-    sumWaiting += pcb->waitTime;
-    sumWeightedTurnaround += pcb->weightedTurnaroundTime;
-    sumWeightedSquared += pcb->weightedTurnaroundTime * pcb->weightedTurnaroundTime;
-    totalTime += pcb->runningTime;
-
-    printWarning("Scheduler", "At time %d process %d finished arr %d total %d remain %d wait %d",
-                 getClk(), pcb->id, pcb->arriveTime, pcb->runningTime, remainingTime,
-                 pcb->waitTime);
-}
-
-void calculatePerformance(int totalTime, int idleTime) {
-    double cpuUtilization = 100 * (totalTime - idleTime / (double)totalTime);
-
-    // write to the scheduler.pref
-    FILE *fp = fopen("scheduler.pref", "w");
-    if (fp == NULL) {
-        perror("Error opening file");
-        exit(EXIT_FAILURE);
-    }
-    fprintf(fp, "CPU Utilization: %.2f%%\n", cpuUtilization);
 }
 
 void pushToReadyQueue(struct PCB *pcb) {
+    if (pcb->state == FINISHED) return;
+    pcb->state = READY;
     if (schedulerType == 0) {
         // Round Robin
         struct Queue *RRreadyQueue = (struct Queue *)readyQueue;
@@ -332,6 +347,7 @@ void pushToReadyQueue(struct PCB *pcb) {
 void schedulerClearResources(int) {
     printInfo("Scheduler", "Scheduler terminating");
     destroySemaphore(schedulerSemid);
+    destroyLogger();
     if (msgctl(schedulerMsqid, IPC_RMID, NULL) == -1) {
         perror("[Scheduler] msgctl");
         exit(EXIT_FAILURE);

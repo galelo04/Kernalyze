@@ -58,3 +58,5 @@ processes.txt
 keyfolder
 os-sim
 process
+*.perf
+*.log

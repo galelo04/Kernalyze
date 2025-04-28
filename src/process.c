@@ -33,7 +33,7 @@ int* getRemainingTimeAddr(int id) {
     return (int*)shmAddr;
 }
 
-void detachRemainingTime(int* remainingTime) {
+void detachRemainingTime(volatile int* remainingTime) {
     if (shmdt((void*)remainingTime) == -1) {
         perror("shmdt");
         exit(EXIT_FAILURE);
@@ -53,6 +53,7 @@ void processClearResources(int) {
         perror("shmctl");
         exit(EXIT_FAILURE);
     }
+    destroyClk(0);
     exit(0);
 }
 
@@ -63,7 +64,7 @@ int main(int, char* argv[]) {
     printInfo("Process", "Process %d started with PID %d", id, getpid());
     syncClk();
 
-    int* remainingTime = getRemainingTimeAddr(id);
+    volatile int* remainingTime = getRemainingTimeAddr(id);
 
     // Busy-wait
     while (1) {
