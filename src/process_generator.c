@@ -372,5 +372,5 @@ void sendProcesstoScheduler(struct ProcessData* p, int special) {
 void pgClkHandler(int) {
     pgCurrentClk = getClk();
     up(pgSemid);
-    printLog(CONSOLE_LOG_ERROR, "PG", "CurrentClk: %d", pgCurrentClk);
+    printLog(CONSOLE_LOG_INFO, "PG", "CurrentClk: %d", pgCurrentClk);
 }
