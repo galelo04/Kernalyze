@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -42,7 +43,17 @@ int main(int argc, char* argv[]) {
 
     // Signal handlers so when the scheduler dies
     signal(SIGINT, pgClearResources);
-    signal(SIGCHLD, checkChildProcess);
+    // signal(SIGCHLD, checkChildProcess);
+    struct sigaction childSigaction;
+
+    childSigaction.sa_handler = checkChildProcess;
+    sigemptyset(&childSigaction.sa_mask);
+    childSigaction.sa_flags = SA_NOCLDSTOP;
+
+    if (sigaction(SIGCHLD, &childSigaction, 0) == -1) {
+        perror("sigaction");
+        raise(SIGINT);
+    }
 
     // Signal handler for clock
     signal(SIGUSR2, pgClkHandler);
@@ -131,6 +142,8 @@ void parseCommandLineArgs(int argc, char* argv[]) {
                 printLog(CONSOLE_LOG_ERROR, "PG", "Invalid filename");
                 raise(SIGINT);
             }
+        } else {
+            i++;
         }
     }
 
@@ -192,7 +205,14 @@ void pgClearResources(__attribute__((unused)) int signum) {
     if (pgCleared) return;
     pgCleared = 1;
     printLog(CONSOLE_LOG_INFO, "PG", "Process generator terminating");
+
+    // Clean up message queue if it exists
+    if (pgMsgqid != -1 && msgctl(pgMsgqid, IPC_RMID, NULL) == -1)
+        perror("[PG] Failed to remove message queue");
+
     destroySemaphore(pgSemid);
+    killpg(getpgrp(), SIGTERM);
+
     exit(0);
 }
 
@@ -235,7 +255,7 @@ void checkChildProcess(__attribute__((unused)) int signum) {
     pid_t pid;
     int status;
 
-    while ((pid = waitpid(-1, &status, WNOHANG)) > 0) {
+    while ((pid = waitpid(-1, &status, 0)) > 0) {
         if (pid == clkPID) {
             if (WIFEXITED(status)) {
                 int exit_code = WEXITSTATUS(status);
@@ -299,6 +319,7 @@ void runProcessGenerator(struct ProcessData* processes, int processCount, pid_t 
 
     while (1) {
         down(pgSemid);
+        printLog(CONSOLE_LOG_INFO, "PG", "CurrentClk: %d", pgCurrentClk);
         // Arrived processes
         while (processIndex < processCount && processes[processIndex].arriveTime == pgCurrentClk) {
             processes[processIndex].pid = forkProcess(processes[processIndex].id);
@@ -319,6 +340,7 @@ void runProcessGenerator(struct ProcessData* processes, int processCount, pid_t 
         // No more processes, wait for scheduler to finish
         if (noMoreProcesses && waitpid(schedulerPID, NULL, WNOHANG) > 0) break;
     }
+    printLog(CONSOLE_LOG_INFO, "PG", "Process generator finished");
 }
 
 pid_t forkProcess(int id) {
@@ -376,5 +398,4 @@ void sendProcesstoScheduler(struct ProcessData* p, int special) {
 void pgClkHandler(int) {
     pgCurrentClk = getClk();
     up(pgSemid);
-    printLog(CONSOLE_LOG_ERROR, "PG", "CurrentClk: %d", pgCurrentClk);
 }

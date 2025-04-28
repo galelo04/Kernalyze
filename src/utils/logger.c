@@ -46,7 +46,7 @@ void logSchedulerPerformance(int idleTime, int totalTime, int numProcesses, doub
 
     // Calculate average waiting time and WTA
     double avgWTA = sumWTA / numProcesses;
-    double avgWait = sumWait / numProcesses;
+    double avgWait = (double)sumWait / numProcesses;
 
     // Calculate standard deviation of WTA
     double varianceWTA = (sumWTAsquared / numProcesses) - (avgWTA * avgWTA);

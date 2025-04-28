@@ -68,13 +68,13 @@ void initScheduler(int type, int quantum) {
     key_t key = ftok(MSG_QUEUE_KEYFILE, 1);
     if (key == -1) {
         perror("[Scheduler] ftok");
-        exit(EXIT_FAILURE);
+        raise(SIGINT);
     }
 
     schedulerMsqid = msgget(key, IPC_CREAT | 0666);
     if (schedulerMsqid == -1) {
         perror("[Scheduler] msgget");
-        exit(EXIT_FAILURE);
+        raise(SIGINT);
     }
 
     // Init queue
@@ -200,7 +200,7 @@ void fetchProcessFromQueue() {
         if (status == -1) {
             if (errno == EINTR) continue;
             perror("[Scheduler] msgrcv");
-            raise(SIGINT);
+            raise(SIGINT);  // No more processes at all
         }
 
         // No processes to fetch for this clock cycle
@@ -218,7 +218,7 @@ void fetchProcessFromQueue() {
         struct PCB *pcb = (struct PCB *)malloc(sizeof(struct PCB));
         if (pcb == NULL) {
             perror("malloc");
-            return;
+            raise(SIGINT);
         }
 
         // Data from generator
@@ -240,19 +240,19 @@ void fetchProcessFromQueue() {
         pcb->shmKey = ftok(SHM_KEYFILE, pcb->id);
         if (pcb->shmKey == -1) {
             perror("[Scheduler] ftok");
-            return;
+            raise(SIGINT);
         }
 
         pcb->shmID = shmget(pcb->shmKey, sizeof(int), IPC_CREAT | 0666);
         if (pcb->shmID == -1) {
             perror("[Scheduler] shmget");
-            return;
+            raise(SIGINT);
         }
 
         pcb->shmAddr = shmat(pcb->shmID, NULL, 0);
         if (pcb->shmAddr == (void *)-1) {
             perror("[Scheduler] shmat");
-            return;
+            raise(SIGINT);
         }
 
         pcb->remainingTime = (int *)pcb->shmAddr;
@@ -295,6 +295,7 @@ void stopProcess(struct PCB *pcb) {
              "At time %d process %d stopped arr %d total %d remain %d wait %d", schedulerCurrentClk,
              pcb->id, pcb->arriveTime, pcb->runningTime, *pcb->remainingTime, pcb->waitTime);
     kill(pcb->pid, SIGSTOP);
+    pcb->turnaroundTime = pcb->finishTime - pcb->arriveTime;
 }
 
 void handleProcessExit(struct PCB *pcb) {
@@ -333,12 +334,12 @@ void handleProcessExit(struct PCB *pcb) {
     // free the shared memory
     if (shmdt(pcb->shmAddr) == -1) {
         perror("[Scheduler] shmdt");
-        exit(EXIT_FAILURE);
+        raise(SIGINT);
     }
 
     if (shmctl(pcb->shmID, IPC_RMID, NULL) == -1) {
         perror("[Scheduler] shmctl");
-        exit(EXIT_FAILURE);
+        raise(SIGINT);
     }
     pcb->shmAddr = NULL;
     pcb->remainingTime = NULL;
@@ -395,10 +396,5 @@ void schedulerClearResources(int) {
         heap_destroy(priorityQueue);
     }
 
-    // Destroy the message queue
-    if (msgctl(schedulerMsqid, IPC_RMID, NULL) == -1) {
-        perror("[Scheduler] msgctl");
-        exit(EXIT_FAILURE);
-    }
     exit(0);
 }
