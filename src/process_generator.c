@@ -34,9 +34,11 @@ int pgMsgqid = -1;
 int pgCurrentClk = -1;
 int pgSemid = -1;
 
+volatile sig_atomic_t pgCleared = 0;
+
 int main(int argc, char* argv[]) {
     // Initialize semaphore for clock
-    pgSemid = initSemaphore(2);
+    pgSemid = initSemaphore(PG_SEMAPHORE);
 
     // Signal handlers so when the scheduler dies
     signal(SIGINT, pgClearResources);
@@ -189,6 +191,8 @@ int readProcessesFile(struct ProcessData** processes) {
 }
 
 void pgClearResources(__attribute__((unused)) int signum) {
+    if (pgCleared) return;
+    pgCleared = 1;
     printLog(CONSOLE_LOG_INFO, "PG", "Process generator terminating");
 
     // Clean up message queue if it exists

@@ -48,11 +48,6 @@ void processClearResources(int) {
         perror("shmdt");
         exit(EXIT_FAILURE);
     }
-
-    if (shmctl(shmID, IPC_RMID, NULL) == -1) {
-        perror("shmctl");
-        exit(EXIT_FAILURE);
-    }
     destroyClk(0);
     exit(0);
 }
@@ -75,6 +70,6 @@ int main(int, char* argv[]) {
     int oldClk = getClk();
     detachRemainingTime(remainingTime);
     printLog(CONSOLE_LOG_SUCCESS, "Process", "Process %d finished at time %d", id, oldClk);
-
+    raise(SIGINT);
     return 0;
 }
