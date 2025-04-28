@@ -1,3 +1,4 @@
+#define _POSIX_C_SOURCE 200809L
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -43,13 +44,13 @@ int main(int argc, char* argv[]) {
     // Signal handlers so when the scheduler dies
     signal(SIGINT, pgClearResources);
     // signal(SIGCHLD, checkChildProcess);
-    struct sigaction act;
+    struct sigaction childSigaction;
 
-    act.sa_handler = checkChildProcess;
-    sigemptyset(&act.sa_mask);
-    act.sa_flags = SA_NOCLDSTOP;
+    childSigaction.sa_handler = checkChildProcess;
+    sigemptyset(&childSigaction.sa_mask);
+    childSigaction.sa_flags = SA_NOCLDSTOP;
 
-    if (sigaction(SIGCHLD, &act, 0) == -1) {
+    if (sigaction(SIGCHLD, &childSigaction, 0) == -1) {
         perror("sigaction");
         exit(1);
     }
