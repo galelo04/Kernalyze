@@ -255,7 +255,7 @@ void checkChildProcess(__attribute__((unused)) int signum) {
     pid_t pid;
     int status;
 
-    while ((pid = waitpid(-1, &status, 0)) > 0) {
+    while ((pid = waitpid(-1, &status, WNOHANG)) > 0) {
         if (pid == clkPID) {
             if (WIFEXITED(status)) {
                 int exit_code = WEXITSTATUS(status);
