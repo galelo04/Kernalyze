@@ -18,9 +18,9 @@
 #include "utils/circularQueue.h"
 #include "utils/console_logger.h"
 #include "utils/list.h"
+#include "utils/logger.h"
 #include "utils/minheap.h"
 #include "utils/semaphore.h"
-#include "utils/logger.h"
 
 struct List *pcbTable;
 struct PCB *currentProcess = NULL;
@@ -96,8 +96,9 @@ void runScheduler() {
         totalTime++;
 
         printError("Scheduler", "CurrentClk: %d", currentClk);
+
         // Check for arrived processes
-        fetchProcessFromQueue();
+        if (currentProcess == NULL || remainingQuantum - 1 > 0) fetchProcessFromQueue();
 
         // Update remaining time for running process
         if (currentProcess != NULL) {
@@ -113,8 +114,10 @@ void runScheduler() {
             }
 
             // Expired quantum
-            if (schedulerType !=2 && remainingQuantum <= 0 && !isFinished) {
+            if (schedulerType != 2 && remainingQuantum <= 0 && !isFinished) {
                 pushToReadyQueue(currentProcess);
+
+                fetchProcessFromQueue();
 
                 struct PCB *nextProcess = schedule();
                 if (nextProcess != NULL && nextProcess != currentProcess) {
@@ -172,6 +175,14 @@ struct PCB *schedule() {
         }
     } else if (schedulerType == 1) {
         // SRTN
+        struct Heap *SRTNreadyQueue = (struct Heap *)readyQueue;
+        if (heap_is_empty(SRTNreadyQueue)) {
+            return NULL;
+        }
+        while (!heap_is_empty(SRTNreadyQueue)) {
+            heap_extract_min(SRTNreadyQueue, (void **)&nextProcess, NULL);
+            if (nextProcess->state == READY) return nextProcess;
+        }
     } else if (schedulerType == 2) {
         // HPF
         struct Heap *HPFreadyQueue = (struct Heap *)readyQueue;
