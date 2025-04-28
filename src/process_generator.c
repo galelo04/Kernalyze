@@ -1,4 +1,4 @@
-#define _POSIX_C_SOURCE 200809L
+#define _GNU_SOURCE
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -52,7 +52,7 @@ int main(int argc, char* argv[]) {
 
     if (sigaction(SIGCHLD, &childSigaction, 0) == -1) {
         perror("sigaction");
-        exit(1);
+        raise(SIGINT);
     }
 
     // Signal handler for clock
