@@ -18,7 +18,7 @@ int readProcessesFile(struct ProcessData** processes);
 pid_t createClk();
 pid_t createScheduler();
 void checkChildProcess(int signum);
-void runProcessGenerator(struct ProcessData* processes, int processCount, pid_t schedulerPID);
+void runProcessGenerator(struct ProcessData* processes, int processCount);
 pid_t forkProcess(int id);
 void sendProcesstoScheduler(struct ProcessData* pcb, int special);
 void pgClearResources(int signum);
@@ -29,8 +29,8 @@ int argSchedulerType;
 int argQuantum;
 char* argFilename;
 
-pid_t clkPID = -1;
-pid_t schedulerPID = -1;
+pid_t  clkPID = -1;
+pid_t  schedulerPID = -1;
 int pgMsgqid = -1;
 int pgCurrentClk = -1;
 int pgSemid = -1;
@@ -90,10 +90,26 @@ int main(int argc, char* argv[]) {
     syncClk();
 
     // Main loop
-    runProcessGenerator(processes, processCount, schedulerPID);
-
+    runProcessGenerator(processes, processCount);
     free(processes);
+
+    // Wait for scheduler to finish
+    if (schedulerPID != -1) {
+        printLog(CONSOLE_LOG_INFO, "PG", "Waiting for scheduler to finish");
+        waitpid(schedulerPID, NULL, 0);
+        schedulerPID = -1;
+        printLog(CONSOLE_LOG_INFO, "PG", "Scheduler has finished");
+    }
+
     destroyClk(1);
+
+    // Wait for clock to finish
+    if (clkPID != -1) {
+        printLog(CONSOLE_LOG_INFO, "PG", "Waiting for clock to finish");
+        waitpid(clkPID, NULL, 0);
+        clkPID = -1;
+        printLog(CONSOLE_LOG_INFO, "PG", "Clock has finished");
+    }
 
     return 0;
 }
@@ -211,7 +227,6 @@ void pgClearResources(__attribute__((unused)) int signum) {
         perror("[PG] Failed to remove message queue");
 
     destroySemaphore(pgSemid);
-    killpg(getpgrp(), SIGTERM);
 
     exit(0);
 }
@@ -255,7 +270,7 @@ void checkChildProcess(__attribute__((unused)) int signum) {
     pid_t pid;
     int status;
 
-    while ((pid = waitpid(-1, &status, 0)) > 0) {
+    while ((pid = waitpid(-1, &status, WNOHANG)) > 0) {
         if (pid == clkPID) {
             if (WIFEXITED(status)) {
                 int exit_code = WEXITSTATUS(status);
@@ -313,7 +328,7 @@ void checkChildProcess(__attribute__((unused)) int signum) {
     }
 }
 
-void runProcessGenerator(struct ProcessData* processes, int processCount, pid_t schedulerPID) {
+void runProcessGenerator(struct ProcessData* processes, int processCount) {
     int processIndex = 0;
     int noMoreProcesses = 0;
 
@@ -338,9 +353,8 @@ void runProcessGenerator(struct ProcessData* processes, int processCount, pid_t 
         sendProcesstoScheduler(NULL, 1);
 
         // No more processes, wait for scheduler to finish
-        if (noMoreProcesses && waitpid(schedulerPID, NULL, WNOHANG) > 0) break;
+        if (noMoreProcesses) break;
     }
-    printLog(CONSOLE_LOG_INFO, "PG", "Process generator finished");
 }
 
 pid_t forkProcess(int id) {

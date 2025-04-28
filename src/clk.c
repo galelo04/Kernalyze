@@ -50,7 +50,7 @@ void initClk() {
 
 void runClk() {
     while (1) {
-        sleep(1);  // sleep for 1 seconds
+        usleep(100*1000);  // sleep for 1 seconds
         (*clkShmAddr)++;
         killpg(getpgrp(), SIGUSR2);
     }

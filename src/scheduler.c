@@ -175,6 +175,8 @@ struct PCB *schedule() {
         while (!isEmpty(RRreadyQueue)) {
             nextProcess = (struct PCB *)dequeue(RRreadyQueue);
             if (nextProcess->state == READY) return nextProcess;
+            printLog(CONSOLE_LOG_DEBUG, "Scheduler", "This print shouldn't happen",
+                     nextProcess->id);
         }
     } else if (schedulerType == 1 || schedulerType == 2) {
         // SRTN and HPF
@@ -185,6 +187,8 @@ struct PCB *schedule() {
         while (!heap_is_empty(priorityReadyQueue)) {
             heap_extract_min(priorityReadyQueue, (void **)&nextProcess, NULL);
             if (nextProcess->state == READY) return nextProcess;
+            printLog(CONSOLE_LOG_DEBUG, "Scheduler", "This print shouldn't happen",
+                     nextProcess->id);
         }
     }
     return NULL;
@@ -374,13 +378,11 @@ void schedulerClearResources(int) {
     struct Node *node = pcbTable->head;
     while (node != NULL) {
         struct PCB *pcb = (struct PCB *)node->data;
-        if (pcb->shmAddr != NULL) {
-            if (shmdt(pcb->shmAddr) == -1) {
-                perror("[Scheduler] shmdt");
-            }
-            if (shmctl(pcb->shmID, IPC_RMID, NULL) == -1) {
-                perror("[Scheduler] shmctl");
-            }
+        if (shmdt(pcb->shmAddr) == -1) {
+            perror("[Scheduler] shmdt");
+        }
+        if (shmctl(pcb->shmID, IPC_RMID, NULL) == -1) {
+            perror("[Scheduler] shmctl");
         }
         free(pcb);
         node = node->next;
