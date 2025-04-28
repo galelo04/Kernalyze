@@ -199,12 +199,7 @@ void fetchProcessFromQueue() {
         int status = msgrcv(schedulerMsqid, &msg, sizeof(struct PCB), MSG_TYPE_PCB, 0);
         if (status == -1) {
             if (errno == EINTR) continue;
-
             perror("[Scheduler] msgrcv");
-            if (msgctl(schedulerMsqid, IPC_RMID, NULL) == -1) {
-                perror("[Scheduler] msgctl");
-            }
-
             raise(SIGINT);  // No more processes at all
         }
 
@@ -313,9 +308,6 @@ void handleProcessExit(struct PCB *pcb) {
         if (status == -1) {
             if (errno == EINTR) continue;
             perror("[Scheduler] msgrcv");
-            if (msgctl(schedulerMsqid, IPC_RMID, NULL) == -1) {
-                perror("[Scheduler] msgctl");
-            }
             raise(SIGINT);
         }
         break;
@@ -404,10 +396,5 @@ void schedulerClearResources(int) {
         heap_destroy(priorityQueue);
     }
 
-    // Destroy the message queue
-    if (msgctl(schedulerMsqid, IPC_RMID, NULL) == -1) {
-        perror("[Scheduler] msgctl");
-        exit(EXIT_FAILURE);
-    }
     exit(0);
 }
