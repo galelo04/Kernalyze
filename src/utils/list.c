@@ -9,7 +9,7 @@ struct List *createList() {
     struct List *list = (struct List *)malloc(sizeof(struct List));
     if (!list) {
         perror("malloc: ");
-        exit(1);
+        exit(EXIT_FAILURE);
     }
     list->head = NULL;
     list->size = 0;

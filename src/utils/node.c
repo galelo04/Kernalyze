@@ -8,7 +8,7 @@ struct Node *createNode(void *data) {
     struct Node *newNode = (struct Node *)malloc(sizeof(struct Node));
     if (!newNode) {
         perror("malloc: ");
-        exit(1);
+        exit(EXIT_FAILURE);
     }
     newNode->data = data;
     newNode->next = NULL;
