@@ -60,17 +60,18 @@ void processClearResources(int) {
 int main(int, char* argv[]) {
     id = atoi(argv[1]);
     signal(SIGINT, processClearResources);
+    signal(SIGTERM, processClearResources);  // Add SIGTERM handler
 
     printLog(CONSOLE_LOG_INFO, "Process", "Process %d started with PID %d", id, getpid());
     syncClk();
 
     volatile int* remainingTime = getRemainingTimeAddr(id);
 
-    // Busy-wait
-    while (1) {
+    // Process execution
+    while (1)
         if (*remainingTime <= 0) break;
-    }
 
+    // Process finished
     int oldClk = getClk();
     detachRemainingTime(remainingTime);
     printLog(CONSOLE_LOG_SUCCESS, "Process", "Process %d finished at time %d", id, oldClk);
