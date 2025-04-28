@@ -71,15 +71,21 @@ void destroyQueue(struct Queue* queue) {
         return;
     }
 
-    struct Node* current = queue->rear->next;  // Start from front
-    struct Node* nextNode;
+    if (queue->rear == NULL) {
+        free(queue);
+        return;
+    }
+    // Free all nodes in the queue
+    struct Node* current = queue->rear->next;
+    queue->rear->next = NULL;  // Break the circular link
 
-    do {
-        nextNode = current->next;
+    while (current != NULL) {
+        struct Node* nextNode = current->next;
         free(current);
         current = nextNode;
-    } while (current != queue->rear->next);
+    }
 
+    // Free the queue structure
     free(queue);
 }
 

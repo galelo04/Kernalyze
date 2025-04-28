@@ -23,6 +23,7 @@
 #include "utils/semaphore.h"
 
 struct List *pcbTable;
+void *readyQueue = NULL;
 struct PCB *currentProcess = NULL;
 
 // Note that they start at -1 to be the same as the clk
@@ -42,20 +43,19 @@ int schedulerType = 0;     // 0: RR, 1: SRTN, 2: HPF
 int schedulerQuantum = 1;  // quantum time for RR
 int noMoreProcesses = 0;   // no more processes arriving
 
-void *readyQueue = NULL;
 int remainingQuantum = 0;  // remaining quantum for current process
 int clkChanged = 0;
 int schedulerSemid = -1;
-volatile sig_atomic_t currentClk;
+volatile sig_atomic_t schedulerCurrentClk;
 
 void schedulerClkHandler(int) {
-    currentClk = getClk();
+    schedulerCurrentClk = getClk();
     up(schedulerSemid);
     signal(SIGUSR2, schedulerClkHandler);
 }
 
 void initScheduler(int type, int quantum) {
-    schedulerSemid = initSemaphore(1);
+    schedulerSemid = initSemaphore(SCHEDULER_SEMAPHORE);
     initLogger();
     signal(SIGUSR2, schedulerClkHandler);
     signal(SIGINT, schedulerClearResources);
@@ -95,10 +95,10 @@ void runScheduler() {
 
         totalTime++;
 
-        printLog(CONSOLE_LOG_ERROR, "Scheduler", "CurrentClk: %d", currentClk);
+        printLog(CONSOLE_LOG_ERROR, "Scheduler", "CurrentClk: %d", schedulerCurrentClk);
 
         // Check for arrived processes
-        if (currentProcess == NULL || remainingQuantum - 1 > 0) fetchProcessFromQueue();
+        fetchProcessFromQueue();
 
         // Update remaining time for running process
         if (currentProcess != NULL) {
@@ -115,19 +115,21 @@ void runScheduler() {
 
             // Expired quantum
             if (schedulerType != 2 && remainingQuantum <= 0 && !isFinished) {
+                // Always reset the quantum
+                remainingQuantum = schedulerQuantum;
+
                 pushToReadyQueue(currentProcess);
-
-                fetchProcessFromQueue();
-
                 struct PCB *nextProcess = schedule();
                 if (nextProcess != NULL && nextProcess != currentProcess) {
+                    // Context Switch
                     stopProcess(currentProcess);
                     currentProcess = nextProcess;
                     resumeProcess(currentProcess);
                 } else {
+                    // Need to do this as the process is set
+                    // to ready on pushToReadyQueue
                     currentProcess->state = RUNNING;
                 }
-                remainingQuantum = schedulerQuantum;
             }
         }
 
@@ -174,24 +176,14 @@ struct PCB *schedule() {
             nextProcess = (struct PCB *)dequeue(RRreadyQueue);
             if (nextProcess->state == READY) return nextProcess;
         }
-    } else if (schedulerType == 1) {
-        // SRTN
-        struct Heap *SRTNreadyQueue = (struct Heap *)readyQueue;
-        if (heap_is_empty(SRTNreadyQueue)) {
+    } else if (schedulerType == 1 || schedulerType == 2) {
+        // SRTN and HPF
+        struct Heap *priorityReadyQueue = (struct Heap *)readyQueue;
+        if (heap_is_empty(priorityReadyQueue)) {
             return NULL;
         }
-        while (!heap_is_empty(SRTNreadyQueue)) {
-            heap_extract_min(SRTNreadyQueue, (void **)&nextProcess, NULL);
-            if (nextProcess->state == READY) return nextProcess;
-        }
-    } else if (schedulerType == 2) {
-        // HPF
-        struct Heap *HPFreadyQueue = (struct Heap *)readyQueue;
-        if (heap_is_empty(HPFreadyQueue)) {
-            return NULL;
-        }
-        while (!heap_is_empty(HPFreadyQueue)) {
-            heap_extract_min(HPFreadyQueue, (void **)&nextProcess, NULL);
+        while (!heap_is_empty(priorityReadyQueue)) {
+            heap_extract_min(priorityReadyQueue, (void **)&nextProcess, NULL);
             if (nextProcess->state == READY) return nextProcess;
         }
     }
@@ -279,17 +271,17 @@ void resumeProcess(struct PCB *pcb) {
     if (pcb->state == FINISHED) return;
 
     pcb->state = RUNNING;
-    pcb->waitTime = currentClk - pcb->arriveTime - pcb->runningTime + *pcb->remainingTime;
+    pcb->waitTime = schedulerCurrentClk - pcb->arriveTime - pcb->runningTime + *pcb->remainingTime;
     enum LOG_LEVEL level = LOG_RESUME;
     if (pcb->startTime == -1) {
-        pcb->startTime = currentClk;
+        pcb->startTime = schedulerCurrentClk;
         level = LOG_START;
     }
 
-    logProcess(pcb, currentClk, level);
+    logProcess(pcb, schedulerCurrentClk, level);
     printLog(CONSOLE_LOG_WARNING, "Scheduler",
-             "At time %d process %d %s arr %d total %d remain %d wait %d", currentClk, pcb->id,
-             LOG_LEVEL_STR[level], pcb->arriveTime, pcb->runningTime, *pcb->remainingTime,
+             "At time %d process %d %s arr %d total %d remain %d wait %d", schedulerCurrentClk,
+             pcb->id, LOG_LEVEL_STR[level], pcb->arriveTime, pcb->runningTime, *pcb->remainingTime,
              pcb->waitTime);
     kill(pcb->pid, SIGCONT);
 }
@@ -298,10 +290,10 @@ void stopProcess(struct PCB *pcb) {
     if (pcb->state == FINISHED) return;
 
     pcb->state = READY;
-    logProcess(pcb, currentClk, LOG_STOPPED);
+    logProcess(pcb, schedulerCurrentClk, LOG_STOPPED);
     printLog(CONSOLE_LOG_WARNING, "Scheduler",
-             "At time %d process %d stopped arr %d total %d remain %d wait %d", currentClk, pcb->id,
-             pcb->arriveTime, pcb->runningTime, *pcb->remainingTime, pcb->waitTime);
+             "At time %d process %d stopped arr %d total %d remain %d wait %d", schedulerCurrentClk,
+             pcb->id, pcb->arriveTime, pcb->runningTime, *pcb->remainingTime, pcb->waitTime);
     kill(pcb->pid, SIGSTOP);
 }
 
@@ -322,7 +314,7 @@ void handleProcessExit(struct PCB *pcb) {
 
     // update PCB
     pcb->state = FINISHED;
-    pcb->finishTime = currentClk;
+    pcb->finishTime = schedulerCurrentClk;
     pcb->turnaroundTime = pcb->finishTime - pcb->arriveTime;
     pcb->weightedTurnaroundTime = (double)pcb->turnaroundTime / pcb->runningTime;
 
@@ -333,10 +325,10 @@ void handleProcessExit(struct PCB *pcb) {
 
     printLog(CONSOLE_LOG_WARNING, "Scheduler",
              "At time %d process %d finished arr %d total %d remain %d wait %d TA %d WTA %.2f",
-             currentClk, pcb->id, pcb->arriveTime, pcb->runningTime, *pcb->remainingTime,
+             schedulerCurrentClk, pcb->id, pcb->arriveTime, pcb->runningTime, *pcb->remainingTime,
              pcb->waitTime, pcb->turnaroundTime, pcb->weightedTurnaroundTime);
 
-    logProcess(pcb, currentClk, LOG_FINISH);
+    logProcess(pcb, schedulerCurrentClk, LOG_FINISH);
 
     // free the shared memory
     if (shmdt(pcb->shmAddr) == -1) {
@@ -348,6 +340,10 @@ void handleProcessExit(struct PCB *pcb) {
         perror("[Scheduler] shmctl");
         exit(EXIT_FAILURE);
     }
+    pcb->shmAddr = NULL;
+    pcb->remainingTime = NULL;
+    pcb->shmID = -1;
+    pcb->shmKey = -1;
 }
 
 void pushToReadyQueue(struct PCB *pcb) {
@@ -372,6 +368,34 @@ void schedulerClearResources(int) {
     printLog(CONSOLE_LOG_INFO, "Scheduler", "Scheduler terminating");
     destroySemaphore(schedulerSemid);
     destroyLogger();
+
+    // Free the PCB table
+    struct Node *node = pcbTable->head;
+    while (node != NULL) {
+        struct PCB *pcb = (struct PCB *)node->data;
+        if (pcb->shmAddr != NULL) {
+            if (shmdt(pcb->shmAddr) == -1) {
+                perror("[Scheduler] shmdt");
+            }
+            if (shmctl(pcb->shmID, IPC_RMID, NULL) == -1) {
+                perror("[Scheduler] shmctl");
+            }
+        }
+        free(pcb);
+        node = node->next;
+    }
+    freeList(pcbTable);
+
+    // Free the ready queue
+    if (schedulerType == 0) {
+        struct Queue *RRreadyQueue = (struct Queue *)readyQueue;
+        destroyQueue(RRreadyQueue);
+    } else if (schedulerType == 1 || schedulerType == 2) {
+        struct Heap *priorityQueue = (struct Heap *)readyQueue;
+        heap_destroy(priorityQueue);
+    }
+
+    // Destroy the message queue
     if (msgctl(schedulerMsqid, IPC_RMID, NULL) == -1) {
         perror("[Scheduler] msgctl");
         exit(EXIT_FAILURE);
