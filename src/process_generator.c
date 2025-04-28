@@ -211,7 +211,6 @@ void pgClearResources(__attribute__((unused)) int signum) {
         perror("[PG] Failed to remove message queue");
 
     destroySemaphore(pgSemid);
-    killpg(getpgrp(), SIGTERM);
 
     exit(0);
 }
