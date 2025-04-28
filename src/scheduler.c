@@ -96,7 +96,10 @@ void runScheduler() {
         totalTime++;
 
         printError("Scheduler", "CurrentClk: %d", currentClk);
+
+        
         // Check for arrived processes
+        if(currentProcess==NULL || remainingQuantum-1>0)
         fetchProcessFromQueue();
 
         // Update remaining time for running process
@@ -115,6 +118,8 @@ void runScheduler() {
             // Expired quantum
             if (remainingQuantum <= 0 && !isFinished) {
                 pushToReadyQueue(currentProcess);
+
+                fetchProcessFromQueue();
 
                 struct PCB *nextProcess = schedule();
                 if (nextProcess != NULL && nextProcess != currentProcess) {
