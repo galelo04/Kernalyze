@@ -18,9 +18,9 @@
 #include "utils/circularQueue.h"
 #include "utils/console_logger.h"
 #include "utils/list.h"
+#include "utils/logger.h"
 #include "utils/minheap.h"
 #include "utils/semaphore.h"
-#include "utils/logger.h"
 
 struct List *pcbTable;
 struct PCB *currentProcess = NULL;
@@ -95,7 +95,7 @@ void runScheduler() {
 
         totalTime++;
 
-        printError("Scheduler", "CurrentClk: %d", currentClk);
+        printLog(CONSOLE_LOG_ERROR, "Scheduler", "CurrentClk: %d", currentClk);
         // Check for arrived processes
         fetchProcessFromQueue();
 
@@ -147,14 +147,15 @@ void runScheduler() {
         if (noMoreProcesses && currentProcess == NULL &&
             ((schedulerType == 0 && isEmpty((struct Queue *)readyQueue)) ||
              (schedulerType != 0 && heap_is_empty((struct Heap *)readyQueue)))) {
-            printInfo("Scheduler", "No more processes and ready queue is empty, terminating");
+            printLog(CONSOLE_LOG_INFO, "Scheduler",
+                     "No more processes and ready queue is empty, terminating");
             break;
         }
     }
     // Calculate performance metrics
     logSchedulerPerformance(idleTime, totalTime, numPocesses, sumWTA, sumWTAsquared, sumWait);
-    printSuccess("Scheduler", "TotalTime: %d, IdleTime: %d, Processes: %d", totalTime, idleTime,
-                 numPocesses);
+    printLog(CONSOLE_LOG_SUCCESS, "Scheduler", "TotalTime: %d, IdleTime: %d, Processes: %d",
+             totalTime, idleTime, numPocesses);
     raise(SIGINT);
 }
 
@@ -195,7 +196,8 @@ void fetchProcessFromQueue() {
         // No more processes at all
         if (msg.pdata.id == -2) {
             noMoreProcesses = 1;
-            printInfo("Scheduler", "Received signal: no more processes will arrive");
+            printLog(CONSOLE_LOG_INFO, "Scheduler",
+                     "Received signal: no more processes will arrive");
             return;
         }
 
@@ -244,8 +246,8 @@ void fetchProcessFromQueue() {
         *pcb->remainingTime = pcb->runningTime;
 
         insertAtFront(pcbTable, (void *)pcb);
-        printInfo("Scheduler", "Process %d arrived at time %d with PID %d", pcb->id,
-                  pcb->arriveTime, pcb->pid);
+        printLog(CONSOLE_LOG_INFO, "Scheduler", "Process %d arrived at time %d with PID %d",
+                 pcb->id, pcb->arriveTime, pcb->pid);
 
         pushToReadyQueue(pcb);
         numPocesses++;
@@ -264,9 +266,10 @@ void resumeProcess(struct PCB *pcb) {
     }
 
     logProcess(pcb, currentClk, level);
-    printWarning("Scheduler", "At time %d process %d %s arr %d total %d remain %d wait %d",
-                 currentClk, pcb->id, LOG_LEVEL_STR[level], pcb->arriveTime, pcb->runningTime,
-                 *pcb->remainingTime, pcb->waitTime);
+    printLog(CONSOLE_LOG_WARNING, "Scheduler",
+             "At time %d process %d %s arr %d total %d remain %d wait %d", currentClk, pcb->id,
+             LOG_LEVEL_STR[level], pcb->arriveTime, pcb->runningTime, *pcb->remainingTime,
+             pcb->waitTime);
     kill(pcb->pid, SIGCONT);
 }
 
@@ -275,9 +278,9 @@ void stopProcess(struct PCB *pcb) {
 
     pcb->state = READY;
     logProcess(pcb, currentClk, LOG_STOPPED);
-    printWarning("Scheduler", "At time %d process %d stopped arr %d total %d remain %d wait %d",
-                 currentClk, pcb->id, pcb->arriveTime, pcb->runningTime, *pcb->remainingTime,
-                 pcb->waitTime);
+    printLog(CONSOLE_LOG_WARNING, "Scheduler",
+             "At time %d process %d stopped arr %d total %d remain %d wait %d", currentClk, pcb->id,
+             pcb->arriveTime, pcb->runningTime, *pcb->remainingTime, pcb->waitTime);
     kill(pcb->pid, SIGSTOP);
 }
 
@@ -307,10 +310,10 @@ void handleProcessExit(struct PCB *pcb) {
     sumWTA += pcb->weightedTurnaroundTime;
     sumWTAsquared += pcb->weightedTurnaroundTime * pcb->weightedTurnaroundTime;
 
-    printWarning("Scheduler",
-                 "At time %d process %d finished arr %d total %d remain %d wait %d TA %d WTA %.2f",
-                 currentClk, pcb->id, pcb->arriveTime, pcb->runningTime, *pcb->remainingTime,
-                 pcb->waitTime, pcb->turnaroundTime, pcb->weightedTurnaroundTime);
+    printLog(CONSOLE_LOG_WARNING, "Scheduler",
+             "At time %d process %d finished arr %d total %d remain %d wait %d TA %d WTA %.2f",
+             currentClk, pcb->id, pcb->arriveTime, pcb->runningTime, *pcb->remainingTime,
+             pcb->waitTime, pcb->turnaroundTime, pcb->weightedTurnaroundTime);
 
     logProcess(pcb, currentClk, LOG_FINISH);
 
@@ -345,7 +348,7 @@ void pushToReadyQueue(struct PCB *pcb) {
 }
 
 void schedulerClearResources(int) {
-    printInfo("Scheduler", "Scheduler terminating");
+    printLog(CONSOLE_LOG_INFO, "Scheduler", "Scheduler terminating");
     destroySemaphore(schedulerSemid);
     destroyLogger();
     if (msgctl(schedulerMsqid, IPC_RMID, NULL) == -1) {

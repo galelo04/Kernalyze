@@ -42,7 +42,7 @@ void detachRemainingTime(volatile int* remainingTime) {
 
 int id;
 void processClearResources(int) {
-    printInfo("Process", "Process %d terminating", id);
+    printLog(CONSOLE_LOG_INFO, "Process", "Process %d terminating", id);
 
     if (shmdt(shmAddr) == -1) {
         perror("shmdt");
@@ -61,7 +61,7 @@ int main(int, char* argv[]) {
     id = atoi(argv[1]);
     signal(SIGINT, processClearResources);
 
-    printInfo("Process", "Process %d started with PID %d", id, getpid());
+    printLog(CONSOLE_LOG_INFO, "Process", "Process %d started with PID %d", id, getpid());
     syncClk();
 
     volatile int* remainingTime = getRemainingTimeAddr(id);
@@ -73,7 +73,7 @@ int main(int, char* argv[]) {
 
     int oldClk = getClk();
     detachRemainingTime(remainingTime);
-    printSuccess("Process", "Process %d finished at time %d", id, oldClk);
+    printLog(CONSOLE_LOG_SUCCESS, "Process", "Process %d finished at time %d", id, oldClk);
 
     return 0;
 }
