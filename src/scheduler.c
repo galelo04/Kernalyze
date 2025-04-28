@@ -98,7 +98,7 @@ void runScheduler() {
         printLog(CONSOLE_LOG_ERROR, "Scheduler", "CurrentClk: %d", currentClk);
 
         // Check for arrived processes
-        if (currentProcess == NULL || remainingQuantum - 1 > 0) fetchProcessFromQueue();
+        fetchProcessFromQueue();
 
         // Update remaining time for running process
         if (currentProcess != NULL) {
@@ -115,19 +115,21 @@ void runScheduler() {
 
             // Expired quantum
             if (schedulerType != 2 && remainingQuantum <= 0 && !isFinished) {
+                // Always reset the quantum
+                remainingQuantum = schedulerQuantum;
+
                 pushToReadyQueue(currentProcess);
-
-                fetchProcessFromQueue();
-
                 struct PCB *nextProcess = schedule();
                 if (nextProcess != NULL && nextProcess != currentProcess) {
+                    // Context Switch
                     stopProcess(currentProcess);
                     currentProcess = nextProcess;
                     resumeProcess(currentProcess);
                 } else {
+                    // Need to do this as the process is set
+                    // to ready on pushToReadyQueue
                     currentProcess->state = RUNNING;
                 }
-                remainingQuantum = schedulerQuantum;
             }
         }
 
