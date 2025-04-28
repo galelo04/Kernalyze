@@ -129,6 +129,8 @@ void parseCommandLineArgs(int argc, char* argv[]) {
                 printLog(CONSOLE_LOG_ERROR, "PG", "Invalid filename");
                 raise(SIGINT);
             }
+        } else {
+            i++;
         }
     }
 
