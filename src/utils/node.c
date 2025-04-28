@@ -1,7 +1,8 @@
-#include <stdlib.h>
-#include <stdio.h>
-#include <errno.h>
 #include "node.h"
+
+#include <errno.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 struct Node *createNode(void *data) {
     struct Node *newNode = (struct Node *)malloc(sizeof(struct Node));
