@@ -37,9 +37,13 @@ int id;
 void processClearResources(int) {
     printLog(CONSOLE_LOG_INFO, "Process", "Process %d terminating", id);
 
-    if (rtShmAddr != (void*)-1 && shmdt(rtShmAddr) == -1) {
-        perror("shmdt process");
+    if (rtShmAddr != NULL && rtShmAddr != (void*)-1) {
+        if (shmdt(rtShmAddr) == -1) {
+            perror("shmdt process");
+        }
+        rtShmAddr = NULL;
     }
+
     destroyClk(0);
     exit(0);
 }

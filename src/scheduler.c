@@ -336,19 +336,21 @@ void handleProcessExit(struct PCB *pcb) {
     logProcess(pcb, schedulerCurrentClk, LOG_FINISH);
 
     // free the shared memory
-    if (shmdt(pcb->shmAddr) == -1) {
-        perror("[Scheduler] shmdt");
-        raise(SIGINT);
+    if (pcb->shmAddr != NULL && pcb->shmAddr != (void *)-1) {
+        if (shmdt(pcb->shmAddr) == -1) {
+            perror("[Scheduler] shmdt");
+        }
+        pcb->shmAddr = NULL;
+        pcb->remainingTime = NULL;
     }
 
-    if (shmctl(pcb->shmID, IPC_RMID, NULL) == -1) {
-        perror("[Scheduler] shmctl");
-        raise(SIGINT);
+    if (pcb->shmID != -1) {
+        if (shmctl(pcb->shmID, IPC_RMID, NULL) == -1) {
+            perror("[Scheduler] shmctl");
+        }
+        pcb->shmID = -1;
+        pcb->shmKey = -1;
     }
-    pcb->shmAddr = NULL;
-    pcb->remainingTime = NULL;
-    pcb->shmID = -1;
-    pcb->shmKey = -1;
 }
 
 void pushToReadyQueue(struct PCB *pcb) {
@@ -378,11 +380,17 @@ void schedulerClearResources(int) {
     struct Node *node = pcbTable->head;
     while (node != NULL) {
         struct PCB *pcb = (struct PCB *)node->data;
-        if (shmdt(pcb->shmAddr) == -1) {
-            perror("[Scheduler] shmdt");
+        // Only detach if shared memory is still attached
+        if (pcb->shmAddr != NULL && pcb->shmAddr != (void *)-1) {
+            if (shmdt(pcb->shmAddr) == -1) {
+                perror("[Scheduler] shmdt");
+            }
         }
-        if (shmctl(pcb->shmID, IPC_RMID, NULL) == -1) {
-            perror("[Scheduler] shmctl");
+        // Only remove if shared memory ID is valid
+        if (pcb->shmID != -1) {
+            if (shmctl(pcb->shmID, IPC_RMID, NULL) == -1) {
+                perror("[Scheduler] shmctl");
+            }
         }
         free(pcb);
         node = node->next;
