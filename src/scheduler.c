@@ -207,8 +207,13 @@ void fetchProcessFromQueue() {
         int status = msgrcv(schedulerMsqid, &msg, sizeof(struct PCB), MSG_TYPE_PCB, 0);
         if (status == -1) {
             if (errno == EINTR) continue;
+
             perror("[Scheduler] msgrcv");
-            raise(SIGINT);
+            if (msgctl(schedulerMsqid, IPC_RMID, NULL) == -1) {
+                perror("[Scheduler] msgctl");
+            }
+
+            raise(SIGINT);  // No more processes at all
         }
 
         // No processes to fetch for this clock cycle
@@ -226,7 +231,7 @@ void fetchProcessFromQueue() {
         struct PCB *pcb = (struct PCB *)malloc(sizeof(struct PCB));
         if (pcb == NULL) {
             perror("malloc");
-            return;
+            exit(EXIT_FAILURE);
         }
 
         // Data from generator
@@ -248,19 +253,19 @@ void fetchProcessFromQueue() {
         pcb->shmKey = ftok(SHM_KEYFILE, pcb->id);
         if (pcb->shmKey == -1) {
             perror("[Scheduler] ftok");
-            return;
+            exit(EXIT_FAILURE);
         }
 
         pcb->shmID = shmget(pcb->shmKey, sizeof(int), IPC_CREAT | 0666);
         if (pcb->shmID == -1) {
             perror("[Scheduler] shmget");
-            return;
+            exit(EXIT_FAILURE);
         }
 
         pcb->shmAddr = shmat(pcb->shmID, NULL, 0);
         if (pcb->shmAddr == (void *)-1) {
             perror("[Scheduler] shmat");
-            return;
+            exit(EXIT_FAILURE);
         }
 
         pcb->remainingTime = (int *)pcb->shmAddr;
@@ -303,6 +308,7 @@ void stopProcess(struct PCB *pcb) {
              "At time %d process %d stopped arr %d total %d remain %d wait %d", currentClk, pcb->id,
              pcb->arriveTime, pcb->runningTime, *pcb->remainingTime, pcb->waitTime);
     kill(pcb->pid, SIGSTOP);
+    pcb->turnaroundTime = pcb->finishTime - pcb->arriveTime;
 }
 
 void handleProcessExit(struct PCB *pcb) {
@@ -315,6 +321,9 @@ void handleProcessExit(struct PCB *pcb) {
         if (status == -1) {
             if (errno == EINTR) continue;
             perror("[Scheduler] msgrcv");
+            if (msgctl(schedulerMsqid, IPC_RMID, NULL) == -1) {
+                perror("[Scheduler] msgctl");
+            }
             raise(SIGINT);
         }
         break;
