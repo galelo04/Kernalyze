@@ -189,13 +189,10 @@ struct PCB *schedule() {
         struct Heap *HPFreadyQueue = (struct Heap *)readyQueue;
         if (heap_is_empty(HPFreadyQueue)) {
             return NULL;
-        } else {
-            while (!isEmpty(HPFreadyQueue)) {
-                void *data = NULL;
-                int priority = 0;
-                heap_extract_min(HPFreadyQueue, &data, &priority);
-                return (struct PCB *)data;
-            }
+        }
+        while (!heap_is_empty(HPFreadyQueue)) {
+            heap_extract_min(HPFreadyQueue, (void **)&nextProcess, NULL);
+            if (nextProcess->state == READY) return nextProcess;
         }
     }
     return NULL;
