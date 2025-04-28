@@ -113,7 +113,7 @@ void runScheduler() {
             }
 
             // Expired quantum
-            if (remainingQuantum <= 0 && !isFinished) {
+            if (schedulerType !=2 && remainingQuantum <= 0 && !isFinished) {
                 pushToReadyQueue(currentProcess);
 
                 struct PCB *nextProcess = schedule();
@@ -172,6 +172,19 @@ struct PCB *schedule() {
         }
     } else if (schedulerType == 1) {
         // SRTN
+    } else if (schedulerType == 2) {
+        // HPF
+        struct Heap *HPFreadyQueue = (struct Heap *)readyQueue;
+        if (heap_is_empty(HPFreadyQueue)) {
+            return NULL;
+        } else {
+            while (!isEmpty(HPFreadyQueue)) {
+                void *data = NULL;
+                int priority = 0;
+                heap_extract_min(HPFreadyQueue, &data, &priority);
+                return (struct PCB *)data;
+            }
+        }
     }
     return NULL;
 }
