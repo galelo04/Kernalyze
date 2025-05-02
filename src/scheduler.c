@@ -15,6 +15,7 @@
 #include <unistd.h>
 
 #include "defs.h"
+#include "memory_allocator.h"
 #include "utils/circularQueue.h"
 #include "utils/console_logger.h"
 #include "utils/list.h"
@@ -63,6 +64,9 @@ void initScheduler(int type, int quantum) {
     schedulerType = type;
     schedulerQuantum = quantum;
     pcbTable = createList();
+
+    // Initialize memory allocator
+    initMemory();
 
     // Create message queue for communication with process generator
     key_t key = ftok(MSG_QUEUE_KEYFILE, 1);
@@ -227,6 +231,7 @@ void fetchProcessFromQueue() {
         pcb->runningTime = msg.pdata.runningTime;
         pcb->priority = msg.pdata.priority;
         pcb->pid = msg.pdata.pid;
+        pcb->memsize = msg.pdata.memsize;
 
         // default values
         pcb->state = READY;
@@ -235,6 +240,17 @@ void fetchProcessFromQueue() {
         pcb->waitTime = -1;
         pcb->turnaroundTime = 0;
         pcb->weightedTurnaroundTime = 0;
+
+        // Allocate memory for the process
+        printLog(CONSOLE_LOG_INFO, "Scheduler", "Allocating %d bytes for process %d of PID %d",
+                 pcb->memsize, pcb->id, pcb->pid);
+        int allocResult = allocateMemory(pcb->pid, pcb->memsize);
+        if (allocResult != 0) {
+            printLog(CONSOLE_LOG_ERROR, "Scheduler", "Failed to allocate memory for process %d",
+                     pcb->id);
+            free(pcb);
+            continue;
+        }
 
         // Create shared memory for remaining time
         pcb->shmKey = ftok(SHM_KEYFILE, pcb->id);
@@ -345,6 +361,9 @@ void handleProcessExit(struct PCB *pcb) {
     pcb->remainingTime = NULL;
     pcb->shmID = -1;
     pcb->shmKey = -1;
+
+    // Free memory allocated to the process
+    freeMemory(pcb->pid);
 }
 
 void pushToReadyQueue(struct PCB *pcb) {
@@ -371,6 +390,8 @@ void schedulerClearResources(int) {
     printLog(CONSOLE_LOG_INFO, "Scheduler", "Scheduler terminating");
     destroySemaphore(schedulerSemid);
     destroyLogger();
+
+    destroyMemory();
 
     // Free the PCB table
     struct Node *node = pcbTable->head;

@@ -1,6 +1,7 @@
 #include "memory_allocator.h"
 
-// Helpers
+#include "defs.h"
+#include "utils/console_logger.h"
 
 int nextPowerOfTwo(int N) {
     if (!(N & (N - 1))) return N;
@@ -8,20 +9,18 @@ int nextPowerOfTwo(int N) {
 }
 
 struct MemoryBlock* mainMemory = NULL;
+FILE* memoryLogFile = NULL;
 
-/*
-    Initilize the memory allocator
-*/
 void initMemory() {
     mainMemory = createEmptyBlock(0, TOTAL_MEMORY - 1, NULL);
+    memoryLogFile = fopen(MEMORY_LOG_FILE, "w");
+    if (memoryLogFile == NULL) {
+        perror("[Memory] Failed to open memory log file");
+        exit(EXIT_FAILURE);
+    }
+    fflush(memoryLogFile);
 }
 
-/**
- *  Allocates memory block by pid
- *  @param pid: pid of the process
- *  @param size: size of the memory in bytes to be allocated
- *  @return 0 on sucess, -1 on failure
- */
 int allocateMemory(pid_t pid, int size) {
     int allocationSize = nextPowerOfTwo(size);
     return allocateHelper(mainMemory, pid, size, allocationSize);
@@ -37,7 +36,7 @@ int allocateHelper(struct MemoryBlock* root, pid_t pid, int size, int allocation
             root->pid = pid;
             root->size = size;
             root->isFree = 0;
-            memoryLogger(root, ALLOCATE, stdout);
+            memoryLogger(root, ALLOCATE, memoryLogFile);
             return 0;  // Success
         }
 
@@ -70,15 +69,10 @@ struct MemoryBlock* createEmptyBlock(int start, int end, struct MemoryBlock* par
     return root;
 }
 
-/**
- *  Free memory block by pid
- *  @param pid: pid of the process
- *  @return 0 on sucess, -1 on failure
- */
 int freeMemory(pid_t pid) {
     struct MemoryBlock* root = findBlockByPid(mainMemory, pid);
     if (root == NULL) return -1;
-    memoryLogger(root, FREE, stdout);
+    memoryLogger(root, FREE, memoryLogFile);
 
     root->isFree = 1;
     root->pid = -1;  // Or 0, depending on your logic
@@ -114,12 +108,17 @@ struct MemoryBlock* findBlockByPid(struct MemoryBlock* root, pid_t pid) {
 
 void memoryLogger(struct MemoryBlock* block, enum MEM_ACTION memAction, FILE* file) {
     if (memAction == ALLOCATE) {
-        fprintf(file, "At time %d allocated %d bytes for process %d from %d to %d\n",
-                get_clk(), block->size, block->pid, block->start, block->end);
+        printLog(CONSOLE_LOG_INFO, "Memory",
+                 "At time %d allocated %d bytes for process %d from %d to %d", getClk(),
+                 block->size, block->pid, block->start, block->end);
+
+        fprintf(file, "At time %d allocated %d bytes for process %d from %d to %d\n", getClk(),
+                block->size, block->pid, block->start, block->end);
     } else if (memAction == FREE) {
-        fprintf(file, "At time %d freed %d bytes from process %d from %d to %d\n",
-                get_clk(), block->size, block->pid, block->start, block->end);
+        fprintf(file, "At time %d freed %d bytes from process %d from %d to %d\n", getClk(),
+                block->size, block->pid, block->start, block->end);
     }
+    fflush(file);
 }
 
 void destroyHelper(struct MemoryBlock* root) {
@@ -129,10 +128,12 @@ void destroyHelper(struct MemoryBlock* root) {
     free(root);
 }
 
-/*
-    Destroy the memory allocator
-*/
 void destroyMemory() {
     destroyHelper(mainMemory);
     mainMemory = NULL;
+
+    if (memoryLogFile != NULL) {
+        fclose(memoryLogFile);
+        memoryLogFile = NULL;
+    }
 }

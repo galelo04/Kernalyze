@@ -186,12 +186,13 @@ int readProcessesFile(struct ProcessData** processes) {
     while (fgets(line, sizeof(line), file) && i < count) {
         if (line[0] == '#') continue;  // comment line
 
-        int id, arrival, runtime, priority;
-        if (sscanf(line, "%d %d %d %d", &id, &arrival, &runtime, &priority) == 4) {
+        int id, arrival, runtime, priority, memsize;
+        if (sscanf(line, "%d %d %d %d %d", &id, &arrival, &runtime, &priority, &memsize) == 5) {
             (*processes)[i].id = id;
             (*processes)[i].arriveTime = arrival;
             (*processes)[i].runningTime = runtime;
             (*processes)[i].priority = priority;
+            (*processes)[i].memsize = memsize;
             i++;
         }
     }

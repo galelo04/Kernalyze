@@ -11,8 +11,12 @@
 #define PROCESS_PATH "./process"
 #define LOG_FILE "scheduler.log"
 #define PERFORMANCE_FILE "scheduler.perf"
+#define MEMORY_LOG_FILE "memory.log"
 #define SCHEDULER_SEMAPHORE 1
 #define PG_SEMAPHORE 2
+
+#define TOTAL_MEMORY 1024
+#define MAX_PROCESS_MEMORY 256
 
 // READY: stopped and ready to run
 // RUNNING: currently running
@@ -25,6 +29,7 @@ struct PCB {
     int priority;
     int runningTime;
     pid_t pid;
+    int memsize;
     // Data filled by the scheduler
     int* remainingTime;
     int waitTime;
@@ -45,6 +50,7 @@ struct ProcessData {
     int runningTime;
     int priority;
     pid_t pid;
+    int memsize;
 };
 
 struct PCBMessage {
