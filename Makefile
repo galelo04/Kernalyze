@@ -11,7 +11,10 @@ SRC_FILES := $(wildcard $(SRC)/**/*.c) $(wildcard $(SRC)/*.c)
 
 # Define the object files for process and process_generator
 OBJ_FILES_PROCESS := $(patsubst $(SRC)/%.c, $(OBJ)/%.c.o, $(filter $(SRC)/process.c $(SRC)/clk.c $(SRC)/utils/%.c , $(SRC_FILES)))
-OBJ_FILES_PROCESS_GENERATOR := $(patsubst $(SRC)/%.c, $(OBJ)/%.c.o, $(filter $(SRC)/process_generator.c $(SRC)/utils/%.c $(SRC)/scheduler.c $(SRC)/clk.c , $(SRC_FILES)))
+OBJ_FILES_PROCESS_GENERATOR := $(patsubst $(SRC)/%.c, $(OBJ)/%.c.o, $(filter $(SRC)/process_generator.c $(SRC)/utils/%.c $(SRC)/scheduler.c $(SRC)/clk.c $(SRC)/memory_allocator.c , $(SRC_FILES)))
+
+# Build all targets (process and process_generator)
+all: $(TARGET_PROCESS) $(TARGET_PROCESS_GENERATOR) keyfile
 
 # Rule to compile each .c file to .o
 $(OBJ)/%.c.o: $(SRC)/%.c
@@ -29,8 +32,6 @@ $(TARGET_PROCESS_GENERATOR): $(OBJ_FILES_PROCESS_GENERATOR)
 	$(CC) -o $@ $^ $(LDFLAGS)
 
 
-# Build all targets (process and process_generator)
-all: $(TARGET_PROCESS) $(TARGET_PROCESS_GENERATOR) keyfile
 
 # Run process executable
 run_process: $(TARGET_PROCESS)
