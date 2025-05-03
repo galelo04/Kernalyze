@@ -334,8 +334,10 @@ void runProcessGenerator(struct ProcessData* processes, int processCount, pid_t 
             noMoreProcesses = 1;
         }
 
-        // Tell scheduler that there are no more processes for this clock
-        sendProcesstoScheduler(NULL, 1);
+        if (!noMoreProcesses) {
+            // No more processes for this clock cycle
+            sendProcesstoScheduler(NULL, 1);
+        }
 
         // No more processes, wait for scheduler to finish
         if (noMoreProcesses && waitpid(schedulerPID, NULL, WNOHANG) > 0) break;

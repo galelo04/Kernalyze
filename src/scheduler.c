@@ -125,6 +125,10 @@ void runScheduler() {
                     stopProcess(currentProcess);
                     currentProcess = nextProcess;
                     resumeProcess(currentProcess);
+                    if (*currentProcess->remainingTime <= 0) {
+                        handleProcessExit(currentProcess);
+                        currentProcess = NULL;
+                    }
                 } else {
                     // Need to do this as the process is set
                     // to ready on pushToReadyQueue
@@ -134,12 +138,18 @@ void runScheduler() {
         }
 
         // Schedule next process if none is running
-        if (currentProcess == NULL) {
+        while (currentProcess == NULL) {
             struct PCB *nextProcess = schedule();
             if (nextProcess != NULL) {
                 currentProcess = nextProcess;
                 resumeProcess(currentProcess);
                 remainingQuantum = schedulerQuantum;
+                if (*nextProcess->remainingTime <= 0) {
+                    handleProcessExit(currentProcess);
+                    currentProcess = NULL;
+                }
+            } else {
+                break;  // No more processes in the ready queue
             }
         }
 
@@ -317,7 +327,11 @@ void handleProcessExit(struct PCB *pcb) {
     pcb->state = FINISHED;
     pcb->finishTime = schedulerCurrentClk;
     pcb->turnaroundTime = pcb->finishTime - pcb->arriveTime;
-    pcb->weightedTurnaroundTime = (double)pcb->turnaroundTime / pcb->runningTime;
+
+    if (pcb->runningTime == 0)
+        pcb->weightedTurnaroundTime = 0;
+    else
+        pcb->weightedTurnaroundTime = (double)pcb->turnaroundTime / pcb->runningTime;
 
     // update performance metrics
     sumWait += pcb->waitTime;
