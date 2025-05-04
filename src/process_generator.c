@@ -9,7 +9,9 @@
 #include <unistd.h>
 
 #include "clk.h"
+#include "memory_allocator.h"
 #include "scheduler.h"
+#include "utils/circularQueue.h"
 #include "utils/console_logger.h"
 #include "utils/semaphore.h"
 
@@ -18,7 +20,8 @@ int readProcessesFile(struct ProcessData** processes);
 pid_t createClk();
 pid_t createScheduler();
 void checkChildProcess(int signum);
-void runProcessGenerator(struct ProcessData* processes, int processCount, pid_t schedulerPID);
+void runProcessGenerator(struct ProcessData* processes, struct Queue* waitList, int processCount,
+                         pid_t schedulerPID);
 pid_t forkProcess(int id);
 void sendProcesstoScheduler(struct ProcessData* pcb, int special);
 void pgClearResources(int signum);
@@ -40,6 +43,7 @@ volatile sig_atomic_t pgCleared = 0;
 int main(int argc, char* argv[]) {
     // Initialize semaphore for clock
     pgSemid = initSemaphore(PG_SEMAPHORE);
+    initMemory();
 
     // Signal handlers so when the scheduler dies
     signal(SIGINT, pgClearResources);
@@ -63,6 +67,7 @@ int main(int argc, char* argv[]) {
 
     // Read processes from file
     struct ProcessData* processes = NULL;
+    struct Queue* waitList = createQueue();
     int processCount = readProcessesFile(&processes);
 
     // Message queue for communication with scheduler
@@ -86,14 +91,14 @@ int main(int argc, char* argv[]) {
     // Clock & Scheduler creation
     schedulerPID = createScheduler();
     clkPID = createClk();
-
     syncClk();
 
     // Main loop
-    runProcessGenerator(processes, processCount, schedulerPID);
+    runProcessGenerator(processes, waitList, processCount, schedulerPID);
 
     free(processes);
     destroyClk(1);
+    destroyMemory();
 
     return 0;
 }
@@ -298,6 +303,7 @@ void checkChildProcess(__attribute__((unused)) int signum) {
             pgClearResources(SIGINT);
         } else {
             // send a message to the scheduler that the process has terminated
+            freeMemory(pid);
             struct PCBMessage msg;
             msg.mtype = MSG_TYPE_TERMINATION;
             msg.pdata.id = pid;
@@ -313,23 +319,36 @@ void checkChildProcess(__attribute__((unused)) int signum) {
     }
 }
 
-void runProcessGenerator(struct ProcessData* processes, int processCount, pid_t schedulerPID) {
+void runProcessGenerator(struct ProcessData* processes, struct Queue* waitList, int processCount,
+                         pid_t schedulerPID) {
     int processIndex = 0;
     int noMoreProcesses = 0;
 
     while (1) {
         down(pgSemid);
-        printLog(CONSOLE_LOG_INFO, "PG", "CurrentClk: %d", pgCurrentClk);
         // Arrived processes
-        while (processIndex < processCount && processes[processIndex].arriveTime == pgCurrentClk) {
-            processes[processIndex].pid = forkProcess(processes[processIndex].id);
 
-            sendProcesstoScheduler(&processes[processIndex], 0);
+        while (processIndex < processCount && processes[processIndex].arriveTime == pgCurrentClk) {
+            enqueue(waitList, (void*)&processes[processIndex]);
             processIndex++;
+        }
+        int waitCount = waitList->size;
+
+        for (int i = 0; i < waitCount; i++) {
+            struct ProcessData* pdata = (struct ProcessData*)dequeue(waitList);
+
+            if (canAllocate(pdata->memsize) == 0) {
+                pdata->pid = forkProcess(pdata->id);
+                pdata->waitTime = pgCurrentClk - pdata->arriveTime;
+                allocateMemory(pdata->pid, pdata->memsize);
+                sendProcesstoScheduler(pdata, 0);
+            } else {
+                enqueue(waitList, (void*)pdata);
+            }
         }
 
         // No more processes to send
-        if (processIndex >= processCount && !noMoreProcesses) {
+        if (processIndex >= processCount && isEmpty(waitList) && !noMoreProcesses) {
             sendProcesstoScheduler(NULL, 2);
             noMoreProcesses = 1;
         }
