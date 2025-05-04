@@ -242,7 +242,7 @@ void fetchProcessFromQueue() {
         pcb->state = READY;
         pcb->startTime = -1;
         pcb->finishTime = -1;
-        pcb->waitTime = -1;
+        pcb->waitTime = msg.pdata.waitTime - 1;
         pcb->turnaroundTime = 0;
         pcb->weightedTurnaroundTime = 0;
 
