@@ -29,6 +29,8 @@ void initMemory();
 // Allocate memory for a process
 int allocateMemory(pid_t pid, int size);
 
+int canAllocate(int size);
+
 // Free memory from a process
 int freeMemory(pid_t pid);
 

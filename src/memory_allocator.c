@@ -115,6 +115,9 @@ void memoryLogger(struct MemoryBlock* block, enum MEM_ACTION memAction, FILE* fi
         fprintf(file, "At time %d allocated %d bytes for process %d from %d to %d\n", getClk(),
                 block->size, block->pid, block->start, block->end);
     } else if (memAction == FREE) {
+        printLog(CONSOLE_LOG_INFO, "Memory",
+                 "At time %d free %d bytes taken by process %d from %d to %d", getClk(),
+                 block->size, block->pid, block->start, block->end);
         fprintf(file, "At time %d freed %d bytes from process %d from %d to %d\n", getClk(),
                 block->size, block->pid, block->start, block->end);
     }
@@ -126,6 +129,14 @@ void destroyHelper(struct MemoryBlock* root) {
     destroyHelper(root->left);
     destroyHelper(root->right);
     free(root);
+}
+
+int canAllocate(int size) {
+    int result = allocateMemory(-10, size);
+
+    if (result == 0) freeMemory(-10);
+
+    return result;
 }
 
 void destroyMemory() {
