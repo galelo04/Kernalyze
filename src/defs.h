@@ -14,6 +14,7 @@
 #define MEMORY_LOG_FILE "memory.log"
 #define SCHEDULER_SEMAPHORE 1
 #define PG_SEMAPHORE 2
+#define PG_SCHEDULER_SEMAPHORE 3
 
 #define TOTAL_MEMORY 1024
 #define MAX_PROCESS_MEMORY 256
@@ -48,7 +49,6 @@ struct ProcessData {
     int id;
     int arriveTime;
     int runningTime;
-    int waitTime;
     int priority;
     pid_t pid;
     int memsize;

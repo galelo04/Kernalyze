@@ -76,7 +76,7 @@ int freeMemory(pid_t pid) {
     memoryLogger(root, FREE, memoryLogFile);
 
     root->isFree = 1;
-    root->pid = -1;  // Or 0, depending on your logic
+    root->pid = -1;
 
     freeMemoryHelper(root);
 

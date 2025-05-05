@@ -36,6 +36,21 @@ int initSemaphore(int id) {
     return semid;  // Return the semaphore ID
 }
 
+int getSemaphore(int id) {
+    key_t key = ftok(SEM_KEYFILE, id);  // Generate a unique key for the semaphore
+    if (key == -1) {
+        perror("ftok failed");
+        raise(SIGINT);
+    }
+    // Get the semaphore set with one semaphore
+    int semid = semget(key, 1, 0666);
+    if (semid == -1) {
+        perror("semget failed");
+        raise(SIGINT);
+    }
+    return semid;  // Return the semaphore ID
+}
+
 void down(int semid) {
     struct sembuf op = {0, -1, 0};  // Operation: decrement semaphore 0 by 1
     while (1) {
