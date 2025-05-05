@@ -48,6 +48,7 @@ struct ProcessData {
     int id;
     int arriveTime;
     int runningTime;
+    int waitTime;
     int priority;
     pid_t pid;
     int memsize;

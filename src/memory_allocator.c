@@ -21,12 +21,12 @@ void initMemory() {
     fflush(memoryLogFile);
 }
 
-int allocateMemory(pid_t pid, int size) {
+int allocateMemory(pid_t pid, int id, int size) {
     int allocationSize = nextPowerOfTwo(size);
-    return allocateHelper(mainMemory, pid, size, allocationSize);
+    return allocateHelper(mainMemory, pid, id, size, allocationSize);
 }
 
-int allocateHelper(struct MemoryBlock* root, pid_t pid, int size, int allocationSize) {
+int allocateHelper(struct MemoryBlock* root, pid_t pid, int id, int size, int allocationSize) {
     if (root == NULL) return -1;
 
     int isLeaf = root->left == NULL && root->right == NULL;
@@ -34,6 +34,7 @@ int allocateHelper(struct MemoryBlock* root, pid_t pid, int size, int allocation
     if (isLeaf) {
         if (root->isFree && root->allocationSize == allocationSize) {
             root->pid = pid;
+            root->id = id;
             root->size = size;
             root->isFree = 0;
             memoryLogger(root, ALLOCATE, memoryLogFile);
@@ -47,12 +48,12 @@ int allocateHelper(struct MemoryBlock* root, pid_t pid, int size, int allocation
         root->left = createEmptyBlock(root->start, mid, root);
         root->right = createEmptyBlock(mid + 1, root->end, root);
         root->isFree = 0;
-        return allocateHelper(root->left, pid, size, allocationSize);
+        return allocateHelper(root->left, pid, id, size, allocationSize);
     }
 
-    int leftResult = allocateHelper(root->left, pid, size, allocationSize);
+    int leftResult = allocateHelper(root->left, pid, id, size, allocationSize);
     if (leftResult == 0) return 0;
-    return allocateHelper(root->right, pid, size, allocationSize);
+    return allocateHelper(root->right, pid, id, size, allocationSize);
 }
 
 struct MemoryBlock* createEmptyBlock(int start, int end, struct MemoryBlock* parent) {
@@ -107,16 +108,20 @@ struct MemoryBlock* findBlockByPid(struct MemoryBlock* root, pid_t pid) {
 }
 
 void memoryLogger(struct MemoryBlock* block, enum MEM_ACTION memAction, FILE* file) {
+    if (block->pid == -10) return;
     if (memAction == ALLOCATE) {
         printLog(CONSOLE_LOG_INFO, "Memory",
                  "At time %d allocated %d bytes for process %d from %d to %d", getClk(),
-                 block->size, block->pid, block->start, block->end);
+                 block->size, block->id, block->start, block->end);
 
         fprintf(file, "At time %d allocated %d bytes for process %d from %d to %d\n", getClk(),
-                block->size, block->pid, block->start, block->end);
+                block->size, block->id, block->start, block->end);
     } else if (memAction == FREE) {
+        printLog(CONSOLE_LOG_INFO, "Memory",
+                 "At time %d freed %d bytes from process %d from %d to %d", getClk(), block->size,
+                 block->id, block->start, block->end);
         fprintf(file, "At time %d freed %d bytes from process %d from %d to %d\n", getClk(),
-                block->size, block->pid, block->start, block->end);
+                block->size, block->id, block->start, block->end);
     }
     fflush(file);
 }
@@ -126,6 +131,12 @@ void destroyHelper(struct MemoryBlock* root) {
     destroyHelper(root->left);
     destroyHelper(root->right);
     free(root);
+}
+
+int canAllocate(int size) {
+    int result = allocateMemory(-10, -10, size);
+    if (result == 0) freeMemory(-10);
+    return result;
 }
 
 void destroyMemory() {
