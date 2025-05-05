@@ -27,8 +27,6 @@ pid_t forkProcess(int id);
 void sendProcesstoScheduler(struct ProcessData* pcb, int special);
 void pgClearResources(int signum);
 void pgClkHandler(int);
-void pushToWaitList(void* waitList, struct ProcessData* pdata);
-struct ProcessData* popFromWaitList(void* waitList);
 
 // Arguments
 int argSchedulerType;
@@ -40,7 +38,7 @@ pid_t schedulerPID = -1;
 int pgMsgqid = -1;
 int pgCurrentClk = -1;
 int pgSemid = -1;
-void* waitList;
+struct Queue* waitList;
 
 volatile sig_atomic_t pgCleared = 0;
 
@@ -96,10 +94,7 @@ int main(int argc, char* argv[]) {
     syncClk();
     initMemory();
 
-    if (argSchedulerType == 0)
-        waitList = (void*)createQueue();
-    else if (argSchedulerType == 1 || argSchedulerType == 2)
-        waitList = (void*)heap_create();
+    waitList = createQueue();
 
     // Main loop
     runProcessGenerator(processes, waitList, processCount, schedulerPID);
@@ -225,6 +220,7 @@ void pgClearResources(__attribute__((unused)) int signum) {
         perror("[PG] Failed to remove message queue");
 
     destroySemaphore(pgSemid);
+    destroyQueue(waitList);
 
     exit(0);
 }
@@ -337,13 +333,13 @@ void runProcessGenerator(struct ProcessData* processes, struct Queue* waitList, 
         // Arrived processes
 
         while (processIndex < processCount && processes[processIndex].arriveTime == pgCurrentClk) {
-            pushToWaitList(waitList, &processes[processIndex]);
+            enqueue(waitList, (void*)&processes[processIndex]);
             processIndex++;
         }
         int waitCount = waitList->size;
 
         for (int i = 0; i < waitCount; i++) {
-            struct ProcessData* pdata = popFromWaitList(waitList);
+            struct ProcessData* pdata = (struct ProcessData*)dequeue(waitList);
 
             if (canAllocate(pdata->memsize) == 0) {
                 pdata->pid = forkProcess(pdata->id);
@@ -351,7 +347,7 @@ void runProcessGenerator(struct ProcessData* processes, struct Queue* waitList, 
                 allocateMemory(pdata->pid, pdata->memsize);
                 sendProcesstoScheduler(pdata, 0);
             } else {
-                pushToWaitList(waitList, pdata);
+                enqueue(waitList, (void*)pdata);
             }
         }
 
@@ -370,35 +366,6 @@ void runProcessGenerator(struct ProcessData* processes, struct Queue* waitList, 
         if (noMoreProcesses && waitpid(schedulerPID, NULL, WNOHANG) > 0) break;
     }
     printLog(CONSOLE_LOG_INFO, "PG", "Process generator finished");
-}
-
-void pushToWaitList(void* waitList, struct ProcessData* pdata) {
-    if (argSchedulerType == 0) {
-        // RR
-        struct Queue* queue = (struct Queue*)waitList;
-        enqueue(queue, pdata);
-    } else if (argSchedulerType == 1) {
-        // SRTN
-        struct Heap* heap = (struct Heap*)waitList;
-        heap_insert(heap, pdata, (pdata->runningTime) * 1000 + pdata->id);
-    } else if (argSchedulerType == 2) {
-        // HPF
-        struct Heap* heap = (struct Heap*)waitList;
-        heap_insert(heap, pdata, (pdata->priority) * 1000 + pdata->id);
-    }
-}
-struct ProcessData* popFromWaitList(void* waitList) {
-    void* data = NULL;
-    if (argSchedulerType == 0) {
-        // RR
-        struct Queue* queue = (struct Queue*)waitList;
-        data = dequeue(queue);
-    } else if (argSchedulerType == 1 || argSchedulerType == 2) {
-        // SRTN and HPF
-        struct Heap* heap = (struct Heap*)waitList;
-        heap_extract_min(heap, &data, NULL);
-    }
-    return (struct ProcessData*)data;
 }
 
 pid_t forkProcess(int id) {
