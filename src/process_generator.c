@@ -17,12 +17,11 @@
 #include "utils/minheap.h"
 
 void parseCommandLineArgs(int argc, char* argv[]);
-int readProcessesFile(struct ProcessData** processes);
+int readProcessesFile();
 pid_t createClk();
 pid_t createScheduler();
 void checkChildProcess(int signum);
-void runProcessGenerator(struct ProcessData* processes, struct Queue* waitList, int processCount,
-                         pid_t schedulerPID);
+void runProcessGenerator(struct Queue* waitList, int processCount, pid_t schedulerPID);
 pid_t forkProcess(int id);
 void sendProcesstoScheduler(struct ProcessData* pcb, int special);
 void pgClearResources(int signum);
@@ -40,6 +39,7 @@ int pgCurrentClk = -1;
 int pgSemid = -1;
 int pgSchedulerSemid = -1;
 struct Queue* waitList;
+struct ProcessData* processesArray = NULL;
 
 volatile sig_atomic_t pgCleared = 0;
 
@@ -50,7 +50,6 @@ int main(int argc, char* argv[]) {
 
     // Signal handlers so when the scheduler dies
     signal(SIGINT, pgClearResources);
-    // signal(SIGCHLD, checkChildProcess);
     struct sigaction childSigaction;
 
     childSigaction.sa_handler = checkChildProcess;
@@ -68,9 +67,16 @@ int main(int argc, char* argv[]) {
     // Read scheduler, quantum, filename
     parseCommandLineArgs(argc, argv);
 
+    // Clock & Scheduler creation
+    schedulerPID = createScheduler();
+    clkPID = createClk();
+
     // Read processes from file
-    struct ProcessData* processes = NULL;
-    int processCount = readProcessesFile(&processes);
+    int processCount = readProcessesFile(&processesArray);
+    if (processCount <= 0) {
+        printLog(CONSOLE_LOG_ERROR, "PG", "No processes found in the file");
+        raise(SIGINT);
+    }
 
     // Message queue for communication with scheduler
     key_t key = ftok(MSG_QUEUE_KEYFILE, 1);
@@ -85,25 +91,13 @@ int main(int argc, char* argv[]) {
         raise(SIGINT);
     }
 
-    if (processCount <= 0) {
-        printLog(CONSOLE_LOG_ERROR, "PG", "No processes found in the file");
-        raise(SIGINT);
-    }
-
-    // Clock & Scheduler creation
-    schedulerPID = createScheduler();
-    clkPID = createClk();
     syncClk();
     initMemory();
 
     waitList = createQueue();
 
     // Main loop
-    runProcessGenerator(processes, waitList, processCount, schedulerPID);
-
-    free(processes);
-    destroyClk(1);
-    destroyMemory();
+    runProcessGenerator(waitList, processCount, schedulerPID);
 
     return 0;
 }
@@ -173,7 +167,7 @@ void parseCommandLineArgs(int argc, char* argv[]) {
     }
 }
 
-int readProcessesFile(struct ProcessData** processes) {
+int readProcessesFile() {
     FILE* file = fopen(argFilename, "r");
     if (file == NULL) {
         perror("[PG] Failed to open input file");
@@ -188,7 +182,7 @@ int readProcessesFile(struct ProcessData** processes) {
         count++;
     }
 
-    *processes = (struct ProcessData*)malloc(count * sizeof(struct ProcessData));
+    processesArray = (struct ProcessData*)malloc(count * sizeof(struct ProcessData));
 
     // Read process data
     rewind(file);
@@ -198,11 +192,11 @@ int readProcessesFile(struct ProcessData** processes) {
 
         int id, arrival, runtime, priority, memsize;
         if (sscanf(line, "%d %d %d %d %d", &id, &arrival, &runtime, &priority, &memsize) == 5) {
-            (*processes)[i].id = id;
-            (*processes)[i].arriveTime = arrival;
-            (*processes)[i].runningTime = runtime;
-            (*processes)[i].priority = priority;
-            (*processes)[i].memsize = memsize;
+            processesArray[i].id = id;
+            processesArray[i].arriveTime = arrival;
+            processesArray[i].runningTime = runtime;
+            processesArray[i].priority = priority;
+            processesArray[i].memsize = memsize;
             i++;
         }
     }
@@ -224,6 +218,8 @@ void pgClearResources(__attribute__((unused)) int signum) {
     destroySemaphore(pgSemid);
     destroyQueue(waitList);
     destroySemaphore(pgSchedulerSemid);
+    destroyMemory();
+    free(processesArray);
 
     exit(0);
 }
@@ -315,6 +311,10 @@ void checkChildProcess(__attribute__((unused)) int signum) {
             msg.mtype = MSG_TYPE_TERMINATION;
             msg.pdata.id = pid;
             msg.pdata.pid = pid;
+            msg.pdata.arriveTime = -1;
+            msg.pdata.runningTime = -1;
+            msg.pdata.priority = -1;
+            msg.pdata.memsize = -1;
 
             if (msgsnd(pgMsgqid, &msg, sizeof(struct ProcessData), 0) == -1) {
                 perror("[PG] msgsnd");
@@ -326,8 +326,7 @@ void checkChildProcess(__attribute__((unused)) int signum) {
     }
 }
 
-void runProcessGenerator(struct ProcessData* processes, struct Queue* waitList, int processCount,
-                         pid_t schedulerPID) {
+void runProcessGenerator(struct Queue* waitList, int processCount, pid_t schedulerPID) {
     int processIndex = 0;
     int noMoreProcesses = 0;
 
@@ -336,8 +335,9 @@ void runProcessGenerator(struct ProcessData* processes, struct Queue* waitList, 
         down(pgSchedulerSemid);
 
         // Arrived processes
-        while (processIndex < processCount && processes[processIndex].arriveTime == pgCurrentClk) {
-            enqueue(waitList, (void*)&processes[processIndex]);
+        while (processIndex < processCount &&
+               processesArray[processIndex].arriveTime == pgCurrentClk) {
+            enqueue(waitList, (void*)&processesArray[processIndex]);
             processIndex++;
         }
         int waitCount = waitList->size;
@@ -411,8 +411,18 @@ void sendProcesstoScheduler(struct ProcessData* p, int special) {
 
     if (special == 1) {  // no more processes for this clk
         msg.pdata.id = -1;
+        msg.pdata.arriveTime = -1;
+        msg.pdata.runningTime = -1;
+        msg.pdata.priority = -1;
+        msg.pdata.pid = -1;
+        msg.pdata.memsize = -1;
     } else if (special == 2) {  // no more processes at all
         msg.pdata.id = -2;
+        msg.pdata.arriveTime = -1;
+        msg.pdata.runningTime = -1;
+        msg.pdata.priority = -1;
+        msg.pdata.pid = -1;
+        msg.pdata.memsize = -1;
     } else {  // normal process
         msg.pdata = *p;
     }

@@ -47,3 +47,24 @@ void *findInList(struct List *list, void *data, int (*cmp)(void *, void *)) {
     }
     return NULL;
 }
+
+void *removeFromList(struct List *list, void *data, int (*cmp)(void *, void *)) {
+    struct Node *temp = list->head;
+    struct Node *prev = NULL;
+    while (temp) {
+        if (cmp(temp->data, data) == 0) {
+            if (prev) {
+                prev->next = temp->next;
+            } else {
+                list->head = temp->next;
+            }
+            void *removedData = temp->data;
+            free(temp);
+            list->size--;
+            return removedData;
+        }
+        prev = temp;
+        temp = temp->next;
+    }
+    return NULL;
+}

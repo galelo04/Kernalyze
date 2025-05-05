@@ -59,4 +59,6 @@ struct PCBMessage {
     struct ProcessData pdata;
 };
 
+static inline int comparePCB(void* a, void* b) { return a - b; }
+
 #endif  // DEFS_H
