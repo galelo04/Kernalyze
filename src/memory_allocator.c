@@ -107,6 +107,7 @@ struct MemoryBlock* findBlockByPid(struct MemoryBlock* root, pid_t pid) {
 }
 
 void memoryLogger(struct MemoryBlock* block, enum MEM_ACTION memAction, FILE* file) {
+    if (block->pid == -10) return;
     if (memAction == ALLOCATE) {
         printLog(CONSOLE_LOG_INFO, "Memory",
                  "At time %d allocated %d bytes for process %d from %d to %d", getClk(),
