@@ -363,6 +363,15 @@ void handleProcessExit(struct PCB *pcb) {
     pcb->remainingTime = NULL;
     pcb->shmID = -1;
     pcb->shmKey = -1;
+
+    // free the PCB in the list
+    struct PCB *pcbToFree = (struct PCB *)removeFromList(pcbTable, (void *)pcb, comparePCB);
+    if (pcbToFree != NULL) {
+        free(pcbToFree);
+        printLog(CONSOLE_LOG_INFO, "Scheduler", "Process %d Freed", pcb->id);
+    } else {
+        printLog(CONSOLE_LOG_ERROR, "Scheduler", "PCB not found in the list");
+    }
 }
 
 void pushToReadyQueue(struct PCB *pcb) {
@@ -392,6 +401,10 @@ void schedulerClearResources(int) {
     struct Node *node = pcbTable->head;
     while (node != NULL) {
         struct PCB *pcb = (struct PCB *)node->data;
+        if (pcb == NULL) {
+            node = node->next;
+            continue;
+        }
         if (pcb->shmAddr != NULL) {
             if (shmdt(pcb->shmAddr) == -1) {
                 perror("[Scheduler] shmdt");
