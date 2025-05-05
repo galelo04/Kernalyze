@@ -367,8 +367,8 @@ void handleProcessExit(struct PCB *pcb) {
     // free the PCB in the list
     struct PCB *pcbToFree = (struct PCB *)removeFromList(pcbTable, (void *)pcb, comparePCB);
     if (pcbToFree != NULL) {
+        printLog(CONSOLE_LOG_INFO, "Scheduler", "Freeing PCB %d", pcbToFree->id);
         free(pcbToFree);
-        printLog(CONSOLE_LOG_INFO, "Scheduler", "Process %d Freed", pcb->id);
     } else {
         printLog(CONSOLE_LOG_ERROR, "Scheduler", "PCB not found in the list");
     }

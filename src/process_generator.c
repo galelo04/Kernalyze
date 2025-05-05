@@ -13,8 +13,8 @@
 #include "scheduler.h"
 #include "utils/circularQueue.h"
 #include "utils/console_logger.h"
-#include "utils/semaphore.h"
 #include "utils/minheap.h"
+#include "utils/semaphore.h"
 
 void parseCommandLineArgs(int argc, char* argv[]);
 int readProcessesFile();
@@ -332,7 +332,7 @@ void runProcessGenerator(struct Queue* waitList, int processCount, pid_t schedul
 
     while (1) {
         down(pgSemid);
-        down(pgSchedulerSemid);
+        if (!noMoreProcesses) down(pgSchedulerSemid);
 
         // Arrived processes
         while (processIndex < processCount &&
