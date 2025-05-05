@@ -366,7 +366,7 @@ void runProcessGenerator(struct ProcessData* processes, struct Queue* waitList, 
         }
 
         // No more processes, wait for scheduler to finish
-        if (noMoreProcesses && waitpid(schedulerPID, NULL, WNOHANG) > 0) break;
+        if (noMoreProcesses && waitpid(schedulerPID, NULL, 0) > 0) break;
     }
     printLog(CONSOLE_LOG_INFO, "PG", "Process generator finished");
 }
