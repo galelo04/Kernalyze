@@ -220,7 +220,17 @@ void pgClearResources(__attribute__((unused)) int signum) {
     destroySemaphore(pgSchedulerSemid);
     destroyMemory();
     free(processesArray);
-
+    if (clkPID != -1) {
+        kill(clkPID, SIGINT);
+        waitpid(clkPID, NULL, 0);
+        printLog(CONSOLE_LOG_INFO, "PG", "Clock has stopped");
+    }
+    if (schedulerPID != -1) {
+        kill(schedulerPID, SIGINT);
+        waitpid(schedulerPID, NULL, 0);
+        printLog(CONSOLE_LOG_INFO, "PG", "Scheduler has stopped");
+    }
+    printLog(CONSOLE_LOG_INFO, "PG", "Process generator terminated");
     exit(0);
 }
 
