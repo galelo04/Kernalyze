@@ -3,6 +3,8 @@
 
 int initSemaphore(int id);
 
+int getSemaphore(int id);
+
 void up(int semid);
 
 void down(int semid);

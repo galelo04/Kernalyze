@@ -38,6 +38,7 @@ pid_t schedulerPID = -1;
 int pgMsgqid = -1;
 int pgCurrentClk = -1;
 int pgSemid = -1;
+int pgSchedulerSemid = -1;
 struct Queue* waitList;
 
 volatile sig_atomic_t pgCleared = 0;
@@ -45,6 +46,7 @@ volatile sig_atomic_t pgCleared = 0;
 int main(int argc, char* argv[]) {
     // Initialize semaphore for clock
     pgSemid = initSemaphore(PG_SEMAPHORE);
+    pgSchedulerSemid = initSemaphore(PG_SCHEDULER_SEMAPHORE);
 
     // Signal handlers so when the scheduler dies
     signal(SIGINT, pgClearResources);
@@ -221,6 +223,7 @@ void pgClearResources(__attribute__((unused)) int signum) {
 
     destroySemaphore(pgSemid);
     destroyQueue(waitList);
+    destroySemaphore(pgSchedulerSemid);
 
     exit(0);
 }
@@ -330,8 +333,9 @@ void runProcessGenerator(struct ProcessData* processes, struct Queue* waitList, 
 
     while (1) {
         down(pgSemid);
-        // Arrived processes
+        down(pgSchedulerSemid);
 
+        // Arrived processes
         while (processIndex < processCount && processes[processIndex].arriveTime == pgCurrentClk) {
             enqueue(waitList, (void*)&processes[processIndex]);
             processIndex++;
@@ -343,7 +347,6 @@ void runProcessGenerator(struct ProcessData* processes, struct Queue* waitList, 
 
             if (canAllocate(pdata->memsize) == 0) {
                 pdata->pid = forkProcess(pdata->id);
-                pdata->waitTime = pgCurrentClk - pdata->arriveTime;
                 allocateMemory(pdata->pid, pdata->id, pdata->memsize);
                 sendProcesstoScheduler(pdata, 0);
             } else {

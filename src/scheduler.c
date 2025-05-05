@@ -46,6 +46,7 @@ int noMoreProcesses = 0;   // no more processes arriving
 int remainingQuantum = 0;  // remaining quantum for current process
 int clkChanged = 0;
 int schedulerSemid = -1;
+int pgSchedSemid = -1;  // semaphore for process generator
 volatile sig_atomic_t schedulerCurrentClk;
 
 void schedulerClkHandler(int) {
@@ -56,6 +57,7 @@ void schedulerClkHandler(int) {
 
 void initScheduler(int type, int quantum) {
     schedulerSemid = initSemaphore(SCHEDULER_SEMAPHORE);
+    pgSchedSemid = getSemaphore(PG_SCHEDULER_SEMAPHORE);
     initLogger();
     signal(SIGUSR2, schedulerClkHandler);
     signal(SIGINT, schedulerClearResources);
@@ -98,7 +100,6 @@ void runScheduler() {
         printLog(CONSOLE_LOG_ERROR, "Scheduler", "CurrentClk: %d", schedulerCurrentClk);
 
         // Check for arrived processes
-        fetchProcessFromQueue();
 
         // Update remaining time for running process
         if (currentProcess != NULL) {
@@ -112,7 +113,7 @@ void runScheduler() {
                 currentProcess = NULL;
                 isFinished = 1;
             }
-
+            fetchProcessFromQueue();
             // Expired quantum
             if (schedulerType != 2 && remainingQuantum <= 0 && !isFinished) {
                 // Always reset the quantum
@@ -135,6 +136,8 @@ void runScheduler() {
                     currentProcess->state = RUNNING;
                 }
             }
+        } else {
+            fetchProcessFromQueue();
         }
 
         // Schedule next process if none is running
@@ -204,6 +207,7 @@ void fetchProcessFromQueue() {
     if (noMoreProcesses) return;
 
     struct PCBMessage msg;
+    up(pgSchedSemid);
 
     while (1) {
         int status = msgrcv(schedulerMsqid, &msg, sizeof(struct PCB), MSG_TYPE_PCB, 0);
@@ -242,7 +246,7 @@ void fetchProcessFromQueue() {
         pcb->state = READY;
         pcb->startTime = -1;
         pcb->finishTime = -1;
-        pcb->waitTime = msg.pdata.waitTime - 1;
+        pcb->waitTime = -1;
         pcb->turnaroundTime = 0;
         pcb->weightedTurnaroundTime = 0;
 
