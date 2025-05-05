@@ -117,7 +117,7 @@ void memoryLogger(struct MemoryBlock* block, enum MEM_ACTION memAction, FILE* fi
                 block->size, block->pid, block->start, block->end);
     } else if (memAction == FREE) {
         printLog(CONSOLE_LOG_INFO, "Memory",
-                 "At time %d free %d bytes taken by process %d from %d to %d", getClk(),
+                 "At time %d freed %d bytes from process %d from %d to %d", getClk(),
                  block->size, block->pid, block->start, block->end);
         fprintf(file, "At time %d freed %d bytes from process %d from %d to %d\n", getClk(),
                 block->size, block->pid, block->start, block->end);
