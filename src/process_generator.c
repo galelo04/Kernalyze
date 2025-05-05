@@ -344,7 +344,7 @@ void runProcessGenerator(struct ProcessData* processes, struct Queue* waitList, 
             if (canAllocate(pdata->memsize) == 0) {
                 pdata->pid = forkProcess(pdata->id);
                 pdata->waitTime = pgCurrentClk - pdata->arriveTime;
-                allocateMemory(pdata->pid, pdata->memsize);
+                allocateMemory(pdata->pid, pdata->id, pdata->memsize);
                 sendProcesstoScheduler(pdata, 0);
             } else {
                 enqueue(waitList, (void*)pdata);

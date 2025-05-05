@@ -10,6 +10,7 @@
 // Memory block structure for buddy allocation system
 struct MemoryBlock {
     pid_t pid;
+    int id;
     int size;
     int allocationSize;
     int start;
@@ -27,7 +28,7 @@ enum MEM_ACTION { ALLOCATE, FREE };
 void initMemory();
 
 // Allocate memory for a process
-int allocateMemory(pid_t pid, int size);
+int allocateMemory(pid_t pid, int id, int size);
 
 int canAllocate(int size);
 
@@ -41,7 +42,7 @@ void destroyMemory();
 int nextPowerOfTwo(int N);
 struct MemoryBlock* createEmptyBlock(int start, int end, struct MemoryBlock* parent);
 struct MemoryBlock* findBlockByPid(struct MemoryBlock* root, pid_t pid);
-int allocateHelper(struct MemoryBlock* root, pid_t pid, int size, int allocationSize);
+int allocateHelper(struct MemoryBlock* root, pid_t pid, int id, int size, int allocationSize);
 void freeMemoryHelper(struct MemoryBlock* root);
 void memoryLogger(struct MemoryBlock* block, enum MEM_ACTION memAction, FILE* file);
 void destroyHelper(struct MemoryBlock* root);
