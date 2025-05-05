@@ -15,4 +15,6 @@ void freeList(struct List *list);
 
 void *findInList(struct List *list, void *data, int (*cmp)(void *, void *));
 
+void *removeFromList(struct List *list, void *data, int (*cmp)(void *, void *));
+
 #endif
